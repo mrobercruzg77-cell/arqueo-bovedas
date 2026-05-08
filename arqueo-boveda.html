@@ -1,0 +1,1889 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#1a237e">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-192.png">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Arqueo">
+<title>Arqueo Bóveda · EPMPTP</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --pri:#1a237e;--pri-l:#3949ab;--pri-d:#0d1457;
+  --acc:#ff8f00;
+  --ok:#2e7d32;--ok-bg:#e8f5e9;--ok-b:#a5d6a7;
+  --wa:#e65100;--wa-bg:#fff3e0;--wa-b:#ffcc80;
+  --er:#c62828;--er-bg:#ffebee;--er-b:#ef9a9a;
+  --bg:#f0f2f5;--sur:#fff;--sur2:#f7f8fc;
+  --tx:#1a1a2e;--tx2:#5c6680;--bd:#dde1ee;
+  --sh:0 2px 12px rgba(26,35,126,.10);
+  --sh2:0 6px 24px rgba(26,35,126,.18);
+  --r:12px;--rs:8px;
+  --hh:58px;--nh:60px;
+  --sat:env(safe-area-inset-top,0px);
+  --sab:env(safe-area-inset-bottom,0px);
+}
+html,body{height:100%;overflow:hidden;background:var(--bg)}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
+  color:var(--tx);-webkit-tap-highlight-color:transparent;font-size:15px}
+
+/* LAYOUT */
+#app{height:100dvh;display:flex;flex-direction:column;overflow:hidden}
+.scr{display:none;flex:1;flex-direction:column;overflow:hidden}
+.scr.on{display:flex}
+.body{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:14px}
+.body.nb{padding-bottom:20px}
+.body.wn{padding-bottom:calc(var(--nh) + var(--sab) + 14px)}
+
+/* HEADER */
+.hdr{background:var(--pri);color:#fff;display:flex;align-items:center;gap:10px;
+  padding:0 14px;min-height:var(--hh);padding-top:var(--sat);flex-shrink:0;
+  box-shadow:0 2px 8px rgba(0,0,0,.2)}
+.hdr h1{font-size:16px;font-weight:700;flex:1;line-height:1.2}
+.hdr small{font-size:11px;opacity:.75;display:block;margin-top:1px}
+.back{background:rgba(255,255,255,.15);border:none;color:#fff;width:34px;height:34px;
+  border-radius:50%;font-size:17px;display:flex;align-items:center;justify-content:center;
+  cursor:pointer;flex-shrink:0}
+
+/* PROGRESS */
+.prog{background:var(--pri-d);display:flex;align-items:center;padding:8px 14px;flex-shrink:0}
+.pd{display:flex;flex-direction:column;align-items:center;flex:1;position:relative}
+.pd::before{content:'';position:absolute;top:13px;left:-50%;right:50%;height:2px;
+  background:rgba(255,255,255,.2);z-index:0}
+.pd:first-child::before{display:none}
+.pd.done::before,.pd.act::before{background:rgba(255,255,255,.55)}
+.pc{width:26px;height:26px;border-radius:50%;background:rgba(255,255,255,.18);
+  color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;
+  justify-content:center;position:relative;z-index:1}
+.pd.act .pc{background:#fff;color:var(--pri)}
+.pd.done .pc{background:rgba(255,255,255,.55);color:var(--pri)}
+.pl{color:rgba(255,255,255,.6);font-size:9px;font-weight:600;white-space:nowrap;margin-top:2px}
+.pd.act .pl,.pd.done .pl{color:#fff}
+
+/* BOTTOM NAV */
+.bnav{background:var(--sur);border-top:1px solid var(--bd);display:flex;flex-shrink:0;
+  height:calc(var(--nh) + var(--sab));padding-bottom:var(--sab);
+  box-shadow:0 -2px 10px rgba(0,0,0,.07)}
+.nb-btn{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:2px;border:none;background:none;color:var(--tx2);font-size:10px;font-weight:600;
+  cursor:pointer;transition:color .15s}
+.nb-btn span{font-size:22px;line-height:1}
+.nb-btn.on{color:var(--pri)}
+
+/* CARDS */
+.card{background:var(--sur);border-radius:var(--r);box-shadow:var(--sh);
+  overflow:hidden;margin-bottom:12px}
+.ch{background:var(--pri);color:#fff;padding:10px 14px;font-weight:700;font-size:14px;
+  display:flex;align-items:center;gap:8px}
+.ch.ok{background:var(--ok)}
+.ch.wa{background:var(--wa)}
+.ch.er{background:var(--er)}
+.cb{padding:14px}
+
+/* FORMS */
+.fg{margin-bottom:12px}
+.lbl{font-size:11px;font-weight:700;color:var(--tx2);display:block;
+  margin-bottom:5px;text-transform:uppercase;letter-spacing:.4px}
+.fc{width:100%;border:2px solid var(--bd);border-radius:var(--rs);
+  padding:11px 13px;font-size:15px;color:var(--tx);background:var(--sur);
+  outline:none;transition:border .15s;-webkit-appearance:none;appearance:none}
+.fc:focus{border-color:var(--pri-l)}
+select.fc{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='7'%3E%3Cpath d='M5 7L0 0h10z' fill='%235c6680'/%3E%3C/svg%3E");
+  background-repeat:no-repeat;background-position:right 12px center;padding-right:32px}
+.fc[readonly]{background:var(--sur2);color:var(--tx2)}
+.pfx{display:flex;border:2px solid var(--bd);border-radius:var(--rs);overflow:hidden;background:var(--sur)}
+.pfx:focus-within{border-color:var(--pri-l)}
+.pfx .px{padding:0 10px;color:var(--tx2);font-weight:700;font-size:13px;
+  background:var(--sur2);display:flex;align-items:center;border-right:2px solid var(--bd);flex-shrink:0}
+.pfx input{border:none;outline:none;flex:1;padding:11px 12px;font-size:15px;color:var(--tx);background:transparent}
+textarea.fc{resize:none}
+
+/* BUTTONS */
+.btn{display:flex;align-items:center;justify-content:center;gap:7px;
+  border:none;border-radius:var(--r);padding:13px 18px;
+  font-size:15px;font-weight:700;cursor:pointer;
+  transition:transform .1s,box-shadow .1s;width:100%;text-align:center}
+.btn:active{transform:scale(.97)}
+.btn-p{background:var(--pri);color:#fff;box-shadow:0 4px 14px rgba(26,35,126,.28)}
+.btn-a{background:var(--acc);color:#fff;box-shadow:0 4px 14px rgba(255,143,0,.28)}
+.btn-ok{background:var(--ok);color:#fff}
+.btn-o{background:transparent;border:2px solid var(--pri);color:var(--pri)}
+.btn-sm{padding:9px 14px;font-size:13px;border-radius:var(--rs)}
+.brow{display:flex;gap:9px;margin-top:6px}
+.brow .btn{flex:1}
+
+/* TURNO / CORREDOR SELECTOR */
+.cor-grid{display:grid;grid-template-columns:1fr;gap:10px;margin-bottom:14px}
+.cor-card{border:3px solid var(--bd);border-radius:var(--r);padding:14px;
+  cursor:pointer;display:flex;align-items:center;gap:12px;background:var(--sur);
+  transition:all .15s}
+.cor-card:active{transform:scale(.98)}
+.cor-card.sel{border-color:currentColor}
+.cor-card .ico{font-size:28px;flex-shrink:0}
+.cor-card .nm{font-size:15px;font-weight:700;flex:1}
+.cor-card .ck{font-size:18px;opacity:0;transition:opacity .15s}
+.cor-card.sel .ck{opacity:1}
+.c-tr{color:#1565C0}.c-so{color:#2E7D32}.c-sw{color:#6A1B9A}
+.tgrid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px}
+.tbtn{border:2px solid var(--bd);border-radius:var(--rs);padding:11px 8px;
+  cursor:pointer;text-align:center;background:var(--sur);font-size:13px;font-weight:600;transition:all .15s}
+.tbtn:active{transform:scale(.97)}
+.tbtn.sel{border-color:var(--pri);background:var(--pri);color:#fff}
+
+/* DENOM TABLE */
+.dtable{width:100%;border-collapse:collapse}
+.dtable th{font-size:10px;font-weight:700;text-transform:uppercase;color:var(--tx2);
+  padding:6px 8px;border-bottom:2px solid var(--bd);text-align:center}
+.dtable th:first-child{text-align:left}
+.dtable td{padding:5px 4px;border-bottom:1px solid var(--bd);vertical-align:middle}
+.dtable tr:last-child td{border-bottom:none;font-weight:700;background:var(--sur2)}
+.dtable .dnm{font-size:13px;font-weight:600;padding-left:4px;white-space:nowrap}
+.dtable .dval{font-size:12px;color:var(--tx2);text-align:right;
+  font-family:monospace;font-weight:600}
+.dtable .dval.ok{color:var(--ok)}.dtable .dval.er{color:var(--er)}
+.ni{border:2px solid var(--bd);border-radius:6px;padding:7px 5px;
+  font-size:14px;font-weight:700;text-align:center;width:100%;
+  outline:none;background:var(--sur);color:var(--tx)}
+.ni:focus{border-color:var(--pri-l)}
+input[type=number]{-moz-appearance:textfield}
+input[type=number]::-webkit-inner-spin-button,
+input[type=number]::-webkit-outer-spin-button{-webkit-appearance:none}
+
+/* ESPECIES TABLE */
+.etable{width:100%;border-collapse:collapse}
+.etable th{font-size:10px;font-weight:700;text-transform:uppercase;color:var(--tx2);
+  padding:7px 8px;border-bottom:2px solid var(--bd);text-align:center;background:var(--sur2)}
+.etable th:first-child{text-align:left;min-width:140px}
+.etable td{padding:5px 4px;border-bottom:1px solid var(--bd);vertical-align:middle}
+.etable .enm{font-size:12px;font-weight:600;padding-left:4px}
+.etable .eval{font-size:12px;color:var(--tx2);text-align:right;font-family:monospace;font-weight:600}
+.badge{display:inline-block;padding:2px 7px;border-radius:10px;font-size:11px;font-weight:700}
+.b-alm{background:#e3f2fd;color:#1565C0}
+.b-par{background:#e8f5e9;color:#2E7D32}
+.b-fix{background:#f3e5f5;color:#6A1B9A}
+.b-fi{background:#fff3e0;color:#e65100}
+
+/* PLANILLAS TABLE */
+.ptbl-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;border-radius:var(--rs);
+  border:1px solid var(--bd);background:var(--sur)}
+.ptbl{border-collapse:collapse;min-width:100%;font-size:12px}
+.ptbl th{background:var(--pri);color:#fff;padding:7px 5px;text-align:center;
+  font-size:10px;font-weight:700;white-space:nowrap;position:sticky;top:0;z-index:2}
+.ptbl th.sticky-col{position:sticky;left:0;z-index:3;background:var(--pri-d)}
+.ptbl td{padding:3px 3px;border-bottom:1px solid var(--bd);vertical-align:middle}
+.ptbl td.sticky-col{position:sticky;left:0;background:var(--sur);z-index:1;
+  font-size:11px;font-weight:600;padding:4px 6px;border-right:2px solid var(--bd);
+  min-width:90px;max-width:110px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ptbl tr:nth-child(even) td.sticky-col{background:var(--sur2)}
+.ptbl tr:nth-child(even) td{background:var(--sur2)}
+.ptbl .tot-row td{background:var(--pri-d)!important;color:#fff;font-weight:700;font-size:11px;
+  padding:6px 4px;position:sticky;bottom:0}
+.ptbl .tot-row td.sticky-col{background:var(--pri-d)!important;font-size:11px}
+.pi{width:52px;border:1px solid var(--bd);border-radius:4px;padding:5px 3px;
+  font-size:13px;font-weight:600;text-align:center;outline:none;background:transparent;color:var(--tx)}
+.pi:focus{border-color:var(--pri-l);background:#fff}
+.pi.cash{width:68px}
+.pi.locked{background:var(--sur2);color:var(--tx2);cursor:not-allowed}
+.ptbl .sec-hdr td{background:#e8eaf6!important;font-size:10px;font-weight:700;
+  color:var(--pri);text-transform:uppercase;padding:5px 6px;letter-spacing:.3px}
+
+/* VALIDACIONES CARD */
+.val-row{display:flex;justify-content:space-between;align-items:center;
+  padding:9px 12px;border-bottom:1px solid var(--bd);gap:8px}
+.val-row:last-child{border-bottom:none}
+.val-lbl{font-size:13px;font-weight:600;flex:1}
+.val-lbl small{font-size:11px;font-weight:400;color:var(--tx2);display:block}
+.chip{display:inline-flex;align-items:center;gap:4px;border-radius:12px;
+  padding:4px 10px;font-size:12px;font-weight:700;white-space:nowrap;flex-shrink:0}
+.chip.ok{background:var(--ok-bg);color:var(--ok)}
+.chip.wa{background:var(--wa-bg);color:var(--wa)}
+.chip.er{background:var(--er-bg);color:var(--er)}
+
+/* STATUS BANNER */
+.sb{border-radius:var(--r);padding:18px;text-align:center;border:3px solid;margin-bottom:14px}
+.sb.ok{background:var(--ok-bg);border-color:var(--ok-b);color:var(--ok)}
+.sb.wa{background:var(--wa-bg);border-color:var(--wa-b);color:var(--wa)}
+.sb.er{background:var(--er-bg);border-color:var(--er-b);color:var(--er)}
+.si{font-size:44px;display:block;margin-bottom:6px}
+.st{font-size:24px;font-weight:900;letter-spacing:1px}
+.ss{font-size:13px;margin-top:4px;opacity:.8}
+
+/* CONTEO FÍSICO */
+.cfield{display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--bd)}
+.cfield:last-child{border-bottom:none}
+.c-target{flex:1}
+.c-target .ct-lbl{font-size:13px;font-weight:600}
+.c-target .ct-val{font-size:20px;font-weight:900;color:var(--pri);font-family:monospace}
+.c-input-wrap{display:flex;flex-direction:column;align-items:center;gap:2px}
+.c-input-wrap label{font-size:9px;font-weight:700;color:var(--tx2);text-transform:uppercase}
+.c-input-wrap .ni{width:80px;font-size:16px}
+.c-diff{min-width:72px;text-align:center;border-radius:var(--rs);padding:5px 8px;font-size:12px;font-weight:700}
+.c-diff.ok{background:var(--ok-bg);color:var(--ok)}
+.c-diff.er{background:var(--er-bg);color:var(--er)}
+
+/* INFORME */
+.inf-sec{margin-bottom:16px}
+.inf-title{font-size:12px;font-weight:700;color:var(--tx2);text-transform:uppercase;
+  letter-spacing:.5px;margin-bottom:8px;display:flex;align-items:center;gap:6px}
+.inf-row{display:flex;justify-content:space-between;align-items:center;
+  padding:8px 12px;border-bottom:1px solid var(--bd)}
+.inf-row:last-child{border-bottom:none}
+.ir-lbl{font-size:13px;color:var(--tx2)}
+.ir-val{font-size:13px;font-weight:700;text-align:right;font-family:monospace}
+.ir-val.ok{color:var(--ok)}.ir-val.er{color:var(--er)}.ir-val.wa{color:var(--wa)}
+
+/* HISTORIAL */
+.hi{background:var(--sur);border-radius:var(--r);margin-bottom:8px;
+  display:flex;overflow:hidden;cursor:pointer;border:1px solid var(--bd);transition:transform .12s}
+.hi:active{transform:scale(.98)}
+.hi .hic{width:5px;flex-shrink:0}
+.hi.ok .hic{background:var(--ok)}.hi.wa .hic{background:var(--wa)}.hi.er .hic{background:var(--er)}
+.hib{flex:1;padding:10px 12px}
+.hit{display:flex;justify-content:space-between;align-items:flex-start;gap:6px}
+.hinm{font-weight:700;font-size:13px}
+.hbg{border-radius:12px;padding:3px 8px;font-size:11px;font-weight:700;flex-shrink:0}
+.hbg.ok{background:var(--ok-bg);color:var(--ok)}
+.hbg.wa{background:var(--wa-bg);color:var(--wa)}
+.hbg.er{background:var(--er-bg);color:var(--er)}
+.him{color:var(--tx2);font-size:11px;margin-top:3px}
+
+/* LOGIN */
+#s-login{background:linear-gradient(170deg,var(--pri) 42%,var(--bg) 42%);overflow-y:auto}
+.lb{padding:44px 20px 28px;text-align:center;color:#fff}
+.lb-ico{font-size:64px;display:block;margin-bottom:12px}
+.lb-t{font-size:24px;font-weight:900}
+.lb-s{font-size:13px;opacity:.8;margin-top:4px}
+.lcard{background:var(--sur);margin:0 14px 24px;border-radius:var(--r);
+  box-shadow:var(--sh2);padding:20px}
+.lcard h2{font-size:17px;font-weight:700;margin-bottom:16px;color:var(--pri)}
+.fi{border:2px solid var(--bd);border-radius:var(--rs);padding:12px 14px;cursor:pointer;
+  font-size:14px;font-weight:500;display:flex;align-items:center;gap:9px;
+  margin-bottom:7px;transition:all .15s;background:var(--sur)}
+.fi:active{transform:scale(.98)}
+.fi.sel{border-color:var(--pri);background:#e8eaf6;color:var(--pri);font-weight:700}
+.fi .fck{margin-left:auto;color:var(--ok);opacity:0}
+.fi.sel .fck{opacity:1}
+.divl{text-align:center;color:var(--tx2);font-size:12px;margin:12px 0;
+  display:flex;align-items:center;gap:7px}
+.divl::before,.divl::after{content:'';flex:1;height:1px;background:var(--bd)}
+
+/* MODAL */
+.ov{position:fixed;inset:0;background:rgba(0,0,0,.5);display:none;
+  align-items:flex-end;z-index:100}
+.ov.on{display:flex}
+.modal{background:var(--sur);width:100%;max-height:88dvh;border-radius:14px 14px 0 0;
+  overflow:hidden;display:flex;flex-direction:column;animation:su .25s ease}
+@keyframes su{from{transform:translateY(100%)}to{transform:translateY(0)}}
+.mh{padding:14px 16px;font-size:16px;font-weight:700;border-bottom:1px solid var(--bd);
+  display:flex;justify-content:space-between;align-items:center}
+.mc{background:none;border:none;font-size:20px;color:var(--tx2);cursor:pointer}
+.mb{overflow-y:auto;padding:14px 16px 32px}
+.mhandle{width:36px;height:4px;background:var(--bd);border-radius:2px;margin:10px auto 0}
+
+/* MISC */
+.sec-lbl{font-size:11px;font-weight:700;color:var(--tx2);text-transform:uppercase;
+  letter-spacing:.5px;margin:16px 0 8px;display:flex;align-items:center;gap:6px}
+.irow{display:flex;justify-content:space-between;align-items:center;
+  padding:9px 0;border-bottom:1px solid var(--bd)}
+.irow:last-child{border-bottom:none}
+.irow .il{font-size:13px;color:var(--tx2);font-weight:500}
+.irow .iv{font-size:14px;font-weight:700;text-align:right}
+.alert{border-radius:var(--rs);padding:10px 12px;font-size:12px;font-weight:500;
+  margin-bottom:12px;display:flex;gap:7px;align-items:flex-start}
+.alert.info{background:#e3f2fd;color:#1565C0}
+.alert.ok{background:var(--ok-bg);color:var(--ok)}
+.alert.wa{background:var(--wa-bg);color:var(--wa)}
+.alert.er{background:var(--er-bg);color:var(--er)}
+.dbox{background:var(--pri-d);color:#fff;border-radius:var(--r);
+  padding:16px;text-align:center;margin-bottom:12px}
+.dbox .dv{font-size:36px;font-weight:900;font-family:monospace;line-height:1}
+.dbox .dl{font-size:12px;opacity:.8;margin-top:4px}
+.dbox.ok{background:var(--ok)}.dbox.er{background:var(--er)}.dbox.wa{background:var(--wa)}
+.home-brand{background:linear-gradient(135deg,var(--pri),var(--pri-l));color:#fff;
+  padding:20px 16px;flex-shrink:0}
+.home-brand .ht{font-size:20px;font-weight:900}
+.home-brand .hs{font-size:12px;opacity:.8;margin-top:2px}
+.home-brand .hu{font-size:11px;background:rgba(255,255,255,.2);border-radius:12px;
+  padding:3px 10px;margin-top:8px;display:inline-block}
+.stat-g{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px}
+.sc{background:var(--sur);border-radius:var(--r);padding:14px;box-shadow:var(--sh);text-align:center}
+.sn{font-size:28px;font-weight:900;color:var(--pri)}
+.sl{font-size:11px;color:var(--tx2);margin-top:3px;font-weight:500}
+.empty{text-align:center;padding:40px 20px;color:var(--tx2)}
+.empty span{font-size:48px;display:block;margin-bottom:10px}
+.toast{position:fixed;bottom:calc(var(--nh) + var(--sab) + 70px);left:50%;
+  transform:translateX(-50%) translateY(16px);background:#1a1a2e;color:#fff;
+  padding:9px 18px;border-radius:18px;font-size:13px;font-weight:500;
+  z-index:200;opacity:0;transition:all .3s;pointer-events:none;white-space:nowrap}
+.toast.on{opacity:1;transform:translateX(-50%) translateY(0)}
+.fcor-tag{display:inline-block;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:700}
+.t-tr{background:#e3f2fd;color:#1565C0}
+.t-so{background:#e8f5e9;color:#2E7D32}
+.t-sw{background:#f3e5f5;color:#6A1B9A}
+
+/* ═══ REPORTE IMPRIMIBLE ═══════════════════════════════════════ */
+/* Oculto normalmente */
+#rpt{display:none}
+
+/* Cuando body tiene clase .modo-impresion — mostrar reporte en pantalla */
+body.modo-impresion #app,
+body.modo-impresion #modal-ov,
+body.modo-impresion .toast{display:none!important}
+body.modo-impresion #rpt{
+  display:block!important;position:fixed!important;
+  top:0!important;left:0!important;right:0!important;bottom:0!important;
+  z-index:9999!important;background:#fff!important;
+  overflow-y:auto!important;padding:10mm!important;
+  box-sizing:border-box!important;
+}
+
+/* En impresión real — página limpia */
+@media print{
+  html,body{overflow:visible!important;height:auto!important;
+    position:static!important;display:block!important}
+  #app,#modal-ov,.toast{display:none!important}
+  #rpt{
+    display:block!important;position:static!important;
+    overflow:visible!important;padding:0!important;
+    z-index:auto!important;
+  }
+  @page{size:A4 portrait;margin:10mm 8mm}
+}
+
+/* Estilos del reporte (visibles solo al imprimir) */
+#rpt{
+  font-family:Arial,Helvetica,sans-serif;
+  font-size:8.5pt;color:#000;
+  background:#fff;padding:0;
+}
+.rpt-top{display:flex;align-items:center;gap:10px;
+  border:2px solid #000;padding:6px 10px;margin-bottom:4px}
+.rpt-logo{font-size:18pt;font-weight:900;color:#1a237e;
+  border:2px solid #1a237e;padding:4px 8px;border-radius:4px;white-space:nowrap}
+.rpt-inst{flex:1;text-align:center}
+.rpt-inst-name{font-size:9pt;font-weight:700;text-transform:uppercase}
+.rpt-inst-sub{font-size:8pt;margin-top:2px}
+.rpt-inst-title{font-size:11pt;font-weight:900;text-transform:uppercase;
+  border-top:1px solid #000;margin-top:4px;padding-top:3px;letter-spacing:.5px}
+
+.rpt-meta{width:100%;border-collapse:collapse;margin-bottom:6px}
+.rpt-meta td{border:1px solid #000;padding:3px 6px;font-size:8pt}
+.rml{font-weight:700;background:#e8eaf6;white-space:nowrap;min-width:110px}
+.rmv{min-width:80px}
+
+.rpt-status{text-align:center;padding:5px;font-size:12pt;font-weight:900;
+  border:2px solid;margin-bottom:6px;letter-spacing:1px}
+.rpt-status.ok{border-color:#2e7d32;color:#2e7d32;background:#e8f5e9}
+.rpt-status.wa{border-color:#e65100;color:#e65100;background:#fff3e0}
+.rpt-status.er{border-color:#c62828;color:#c62828;background:#ffebee}
+
+.rpt-sec{font-size:9.5pt;font-weight:700;text-transform:uppercase;
+  background:#1a237e;color:#fff;padding:4px 8px;margin-bottom:0;
+  letter-spacing:.3px}
+
+.rpt-tbl{width:100%;border-collapse:collapse;font-size:8pt}
+.rpt-tbl th{background:#1a237e;color:#fff;border:1px solid #000;
+  padding:4px 5px;text-align:center;font-size:7.5pt;font-weight:700;line-height:1.3}
+.rpt-tbl td{border:1px solid #000;padding:3px 5px;font-size:8pt;vertical-align:middle}
+.rpt-tbl .rl{font-weight:600;background:#f5f5f5;white-space:nowrap}
+.rpt-tbl .rn{text-align:right;font-family:'Courier New',monospace;font-weight:600}
+.rpt-tbl .rc{text-align:center}
+.rpt-tbl .rtot{font-weight:700;background:#e8eaf6}
+.rpt-tbl .rsub{font-weight:600;background:#f5f5f5;font-size:8pt}
+.rpt-tbl .rok{color:#2e7d32;font-weight:700;text-align:center}
+.rpt-tbl .rer{color:#c62828;font-weight:700;text-align:center}
+.rpt-tbl .rwa{color:#e65100;font-weight:700;text-align:center}
+.rpt-ok{color:#2e7d32;font-weight:700;text-align:center}
+.rpt-er{color:#c62828;font-weight:700;text-align:center}
+.rpt-wa{color:#e65100;font-weight:700;text-align:center}
+.rpt-diff{background:#ffebee}
+.rpt-wa-row{background:#fff3e0}
+
+.rpt-sigs{display:flex;justify-content:space-around;margin-top:20px;gap:20px}
+.rpt-sig{text-align:center;flex:1}
+.rpt-sig-line{border-top:1.5px solid #000;margin-bottom:4px;margin-top:40px}
+.rpt-sig-name{font-size:9pt;font-weight:700}
+.rpt-sig-role{font-size:8pt;color:#333;text-transform:uppercase;font-weight:600}
+.rpt-footer{text-align:center;font-size:7pt;color:#666;
+  border-top:1px solid #ccc;margin-top:10px;padding-top:4px}
+</style>
+</head>
+<body>
+<div id="app">
+
+<!-- LOGIN -->
+<div class="scr" id="s-login">
+  <div class="lb">
+    <span class="lb-ico">🏦</span>
+    <div class="lb-t">Arqueo de Bóveda</div>
+    <div class="lb-s">EPMPTP · Coordinación de Fiscalización Operativa</div>
+  </div>
+  <div class="lcard">
+    <h2>👤 Seleccione su nombre</h2>
+    <div id="fisc-list"></div>
+    <div class="divl">o ingrese manualmente</div>
+    <div class="fg">
+      <label class="lbl">Nombre completo</label>
+      <input id="fisc-input" type="text" class="fc" placeholder="Nombre y apellido" autocomplete="name">
+    </div>
+    <button class="btn btn-p" onclick="doLogin()">✅ Ingresar</button>
+  </div>
+</div>
+
+<!-- HOME -->
+<div class="scr" id="s-home">
+  <div class="home-brand">
+    <div class="ht">🏦 Arqueo de Bóveda</div>
+    <div class="hs">EPMPTP · Control Operativo</div>
+    <div class="hu" id="huser">Fiscalizador</div>
+  </div>
+  <div class="body wn">
+    <div class="sec-lbl">📊 Resumen de Hoy</div>
+    <div class="stat-g">
+      <div class="sc"><div class="sn" id="st-hoy">0</div><div class="sl">Arqueos hoy</div></div>
+      <div class="sc"><div class="sn" id="st-dif" style="color:var(--ok)">0</div><div class="sl">Con diferencias</div></div>
+      <div class="sc"><div class="sn" id="st-tot">0</div><div class="sl">Total histórico</div></div>
+      <div class="sc"><div class="sn" id="st-ok" style="color:var(--ok)">100%</div><div class="sl">% sin diferencia</div></div>
+    </div>
+    <button class="btn btn-a" style="margin-bottom:14px" onclick="iniciarArqueo()">➕ Nuevo Arqueo de Bóveda</button>
+    <div class="sec-lbl">🕐 Últimos arqueos</div>
+    <div id="home-rec"></div>
+  </div>
+  <nav class="bnav">
+    <button class="nb-btn on" id="nb-h" onclick="goHome()"><span>🏠</span>Inicio</button>
+    <button class="nb-btn" onclick="iniciarArqueo()"><span>➕</span>Nuevo</button>
+    <button class="nb-btn" id="nb-hi" onclick="goHist()"><span>📋</span>Historial</button>
+  </nav>
+</div>
+
+<!-- ARQUEO (8 pasos) -->
+<div class="scr" id="s-arq">
+  <div class="hdr">
+    <button class="back" onclick="backArqueo()">←</button>
+    <div><h1 id="arq-title">Nuevo Arqueo</h1><small id="arq-sub">Paso 1 de 8</small></div>
+  </div>
+  <div class="prog" id="arq-prog"></div>
+
+  <!-- P1: Info General -->
+  <div class="body nb" id="p1">
+    <div class="sec-lbl">🚌 Corredor</div>
+    <div class="cor-grid">
+      <div class="cor-card c-tr" onclick="selCor('trolebús',this)">
+        <span class="ico">🚃</span><span class="nm">Trolebús</span><span class="ck">✓</span>
+      </div>
+      <div class="cor-card c-so" onclick="selCor('ecovia',this)">
+        <span class="ico">🚌</span><span class="nm">Sur Oriental (Ecovía)</span><span class="ck">✓</span>
+      </div>
+      <div class="cor-card c-sw" onclick="selCor('surOcc',this)">
+        <span class="ico">🚍</span><span class="nm">Sur Occidental</span><span class="ck">✓</span>
+      </div>
+    </div>
+    <div class="sec-lbl">⏰ Turno</div>
+    <div class="tgrid">
+      <div class="tbtn" onclick="selTurno('Primero',this)">🌅 Primero<br><small style="font-weight:400">06:00 – 14:00</small></div>
+      <div class="tbtn" onclick="selTurno('Segundo',this)">🌇 Segundo<br><small style="font-weight:400">14:00 – 22:00</small></div>
+    </div>
+    <div class="fg">
+      <label class="lbl">Fecha</label>
+      <input id="p1-fecha" type="date" class="fc">
+    </div>
+    <div class="fg">
+      <label class="lbl">Hora inicio</label>
+      <input id="p1-hora" type="time" class="fc">
+    </div>
+    <div class="fg">
+      <label class="lbl">Supervisor de Caja</label>
+      <input id="p1-sup" type="text" class="fc" placeholder="Nombre del supervisor">
+    </div>
+    <div class="fg">
+      <label class="lbl">Fondo Fijo (valor certificado)</label>
+      <div class="pfx"><div class="px">$</div>
+        <input id="p1-fondo" type="number" min="0" step="0.01" placeholder="0.00">
+      </div>
+    </div>
+    <button class="btn btn-p" onclick="goP(2)">Continuar → Cambio de Turno Fondo</button>
+  </div>
+
+  <!-- P2: CT Fondo -->
+  <div class="body nb" id="p2" style="display:none">
+    <div class="alert info"><span>ℹ️</span><span>Ingrese los valores del <strong>Cambio de Turno — FONDO</strong>.</span></div>
+    <div class="card">
+      <div class="ch">💵 Fondo Fijo — Efectivo</div>
+      <div class="cb" style="padding:10px">
+        <table class="dtable" id="fondo-tbl">
+          <thead><tr>
+            <th>Denominación</th>
+            <th>Entregado</th>
+            <th>Saldo Caja</th>
+            <th>Total</th>
+          </tr></thead>
+          <tbody id="fondo-body"></tbody>
+          <tfoot id="fondo-foot"></tfoot>
+        </table>
+      </div>
+    </div>
+    <div class="brow">
+      <button class="btn btn-o btn-sm" onclick="goP(1)">← Volver</button>
+      <button class="btn btn-p" onclick="goP(3)">Continuar → CT Especies</button>
+    </div>
+  </div>
+
+  <!-- P3: CT Especies -->
+  <div class="body nb" id="p3" style="display:none">
+    <div class="alert info"><span>ℹ️</span><span>Ingrese valores de <strong>Especies Valoradas</strong> del Cambio de Turno.</span></div>
+    <div class="card">
+      <div class="ch">🎟️ Especies Valoradas</div>
+      <div class="cb" style="padding:10px">
+        <table class="etable" id="esp-tbl">
+          <thead><tr>
+            <th>Tipo</th>
+            <th>Entregado</th>
+            <th>En Bóveda</th>
+            <th>Total (Kardex)</th>
+          </tr></thead>
+          <tbody id="esp-body"></tbody>
+        </table>
+      </div>
+    </div>
+    <div class="brow">
+      <button class="btn btn-o btn-sm" onclick="goP(2)">← Volver</button>
+      <button class="btn btn-p" onclick="goP(4)">Continuar → Planillas HOY</button>
+    </div>
+  </div>
+
+  <!-- P4: Planillas HOY -->
+  <div class="body nb" id="p4" style="display:none">
+    <div class="alert info"><span>📋</span><span>Ingrese los boletos y efectivo <strong>entregados HOY</strong> a cada recaudador.</span></div>
+    <div id="p4-content"></div>
+    <div id="p4-val" class="card" style="margin-bottom:12px">
+      <div class="ch">📊 Validación vs Cambio de Turno</div>
+      <div class="cb" id="p4-val-body" style="padding:8px"></div>
+    </div>
+    <div class="brow">
+      <button class="btn btn-o btn-sm" onclick="goP(3)">← Volver</button>
+      <button class="btn btn-p" onclick="goP(5)">Continuar → Planillas MAÑANA</button>
+    </div>
+  </div>
+
+  <!-- P5: Planillas MAÑANA -->
+  <div class="body nb" id="p5" style="display:none">
+    <div class="alert wa"><span>⚠️</span><span>Planillas de mañana: efectivo inicial debe ser <strong>$0.00</strong> en todas las paradas.</span></div>
+    <div id="p5-content"></div>
+    <div id="p5-val" class="card" style="margin-bottom:12px">
+      <div class="ch">📦 Stock Libre en Bóveda (para contar)</div>
+      <div class="cb" id="p5-val-body" style="padding:8px"></div>
+    </div>
+    <div class="brow">
+      <button class="btn btn-o btn-sm" onclick="goP(4)">← Volver</button>
+      <button class="btn btn-p" onclick="goP(6)">Continuar → Conteo Boletos</button>
+    </div>
+  </div>
+
+  <!-- P6: Conteo Físico Boletos -->
+  <div class="body nb" id="p6" style="display:none">
+    <div class="alert info"><span>📦</span><span>Cuente físicamente los boletos del <strong>Stock Libre</strong> e ingrese el conteo real.</span></div>
+    <div class="card">
+      <div class="ch">🎟️ Conteo Físico de Boletos</div>
+      <div class="cb" id="p6-body"></div>
+    </div>
+    <div class="brow">
+      <button class="btn btn-o btn-sm" onclick="goP(5)">← Volver</button>
+      <button class="btn btn-p" onclick="goP(7)">Continuar → Conteo Dinero</button>
+    </div>
+  </div>
+
+  <!-- P7: Conteo Físico Dinero -->
+  <div class="body nb" id="p7" style="display:none">
+    <div class="alert info"><span>💵</span><span>Cuente el efectivo físico en bóveda y compare con el <strong>Saldo de Caja</strong>.</span></div>
+    <div class="card">
+      <div class="ch">💵 Conteo Físico de Efectivo</div>
+      <div class="cb" id="p7-body"></div>
+    </div>
+    <div class="brow">
+      <button class="btn btn-o btn-sm" onclick="goP(6)">← Volver</button>
+      <button class="btn btn-p" onclick="goP(8)">Continuar → Informe Final</button>
+    </div>
+  </div>
+
+  <!-- P8: Informe Final -->
+  <div class="body nb" id="p8" style="display:none">
+    <div id="p8-banner"></div>
+    <div class="card">
+      <div class="ch">📋 Información General</div>
+      <div class="cb" id="p8-info"></div>
+    </div>
+    <div class="card">
+      <div class="ch">💵 Arqueo Fondo Fijo</div>
+      <div class="cb" id="p8-fondo"></div>
+    </div>
+    <div class="card">
+      <div class="ch">🎟️ Arqueo Especies Valoradas</div>
+      <div class="cb" id="p8-esp"></div>
+    </div>
+    <div class="fg">
+      <label class="lbl">Hora final</label>
+      <input id="p8-hora-fin" type="time" class="fc">
+    </div>
+    <div class="fg">
+      <label class="lbl">Observaciones</label>
+      <textarea id="p8-obs" class="fc" rows="3" placeholder="Novedades, justificaciones..."></textarea>
+    </div>
+    <div class="alert ok"><span>👤</span><span id="p8-firma">Fiscalizador</span></div>
+    <button class="btn btn-ok" style="margin-bottom:10px" onclick="guardarArqueo()">✅ Confirmar y Guardar Arqueo</button>
+    <button class="btn btn-p" style="margin-bottom:10px;background:#6A1B9A;box-shadow:0 4px 14px rgba(106,27,154,.3)" onclick="imprimirReporte()">🖨️ Imprimir / Guardar PDF</button>
+    <button class="btn btn-o btn-sm" onclick="goP(7)">← Revisar</button>
+    <div style="height:12px"></div>
+  </div>
+</div>
+
+<!-- HISTORIAL -->
+<div class="scr" id="s-hist">
+  <div class="hdr"><h1 style="flex:1">📋 Historial de Arqueos</h1>
+    <button class="back" style="font-size:13px;width:auto;padding:0 10px;border-radius:16px" onclick="exportCSV()">CSV</button>
+  </div>
+  <div class="body wn">
+    <div style="display:flex;gap:7px;flex-wrap:wrap;margin-bottom:12px" id="hf-bar">
+      <div class="chip ok" onclick="filtHist('todos',this)" style="cursor:pointer">Todos</div>
+      <div class="chip ok" onclick="filtHist('ok',this)" style="cursor:pointer">✅ OK</div>
+      <div class="chip wa" onclick="filtHist('wa',this)" style="cursor:pointer">⚠️ Revisar</div>
+      <div class="chip er" onclick="filtHist('er',this)" style="cursor:pointer">🔴 Error</div>
+    </div>
+    <div id="hist-list"></div>
+  </div>
+  <nav class="bnav">
+    <button class="nb-btn" onclick="goHome()"><span>🏠</span>Inicio</button>
+    <button class="nb-btn" onclick="iniciarArqueo()"><span>➕</span>Nuevo</button>
+    <button class="nb-btn on"><span>📋</span>Historial</button>
+  </nav>
+</div>
+
+<!-- MODAL DETALLE -->
+<div class="ov" id="modal-ov" onclick="closeModal(event)">
+  <div class="modal">
+    <div class="mhandle"></div>
+    <div class="mh"><span id="modal-title">Detalle</span><button class="mc" onclick="closeModal()">✕</button></div>
+    <div class="mb" id="modal-body"></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<!-- ═══════════════════════════════════════════════════
+     REPORTE IMPRIMIBLE (oculto en pantalla)
+═══════════════════════════════════════════════════ -->
+<div id="rpt">
+  <!-- Encabezado institucional -->
+  <div class="rpt-top">
+    <div class="rpt-logo">EPMPTP</div>
+    <div class="rpt-inst">
+      <div class="rpt-inst-name">EMPRESA PÚBLICA METROPOLITANA DE TRANSPORTE DE PASAJEROS DE QUITO</div>
+      <div class="rpt-inst-sub">COORDINACIÓN DE FISCALIZACIÓN OPERATIVA</div>
+      <div class="rpt-inst-title">ARQUEO DE VALORES EN BÓVEDA</div>
+    </div>
+  </div>
+
+  <!-- Datos generales -->
+  <table class="rpt-meta">
+    <tr>
+      <td class="rml">CORREDOR:</td><td class="rmv" id="rpt-corredor" colspan="3"></td>
+      <td class="rml">SUPERVISORES DE CAJA:</td><td class="rmv" id="rpt-supervisor" colspan="2"></td>
+    </tr>
+    <tr>
+      <td class="rml">FECHA:</td><td class="rmv" id="rpt-fecha"></td>
+      <td class="rml">HORA INICIO:</td><td class="rmv" id="rpt-hinicio"></td>
+      <td class="rml">HORA FINAL:</td><td class="rmv" id="rpt-hfin"></td>
+      <td class="rml">TURNO:</td><td class="rmv" id="rpt-turno"></td> <!-- removed extra td -->
+    </tr>
+    <tr>
+      <td class="rml">FONDO FIJO CERTIFICADO:</td><td class="rmv" id="rpt-fondo"></td>
+      <td class="rml">FISCALIZADOR(ES):</td><td class="rmv" id="rpt-fisc" colspan="4"></td>
+    </tr>
+  </table>
+
+  <!-- Estado del arqueo -->
+  <div class="rpt-status" id="rpt-status"></div>
+
+  <!-- SECCIÓN 1: FONDO FIJO -->
+  <div class="rpt-sec">1. ARQUEO FONDO FIJO (DINERO)</div>
+  <table class="rpt-tbl">
+    <thead>
+      <tr>
+        <th colspan="2" style="text-align:left">DENOMINACIÓN</th>
+        <th>VALOR EFECTIVO ENTREGADO SEGÚN PLANILLAS<br>(DESPACHADO)</th>
+        <th>ABASTECIMIENTO (+)</th>
+        <th>VALOR EFECTIVO EN BÓVEDA<br>(FÍSICO CONTADO)</th>
+        <th>TOTAL<br>(KARDEX)</th>
+      </tr>
+    </thead>
+    <tbody id="rpt-fondo-body"></tbody>
+    <tfoot id="rpt-fondo-foot"></tfoot>
+  </table>
+
+  <!-- SECCIÓN 2: ESPECIES VALORADAS -->
+  <div class="rpt-sec" style="margin-top:12px">2. ARQUEO ESPECIES VALORADAS</div>
+  <table class="rpt-tbl">
+    <thead>
+      <tr>
+        <th>TIPO</th>
+        <th style="text-align:left">ESPECIES VALORADAS</th>
+        <th>KARDEX</th>
+        <th>ENTREGADO SEGÚN PLANILLAS</th>
+        <th>FÍSICO EN BÓVEDA</th>
+        <th>ABASTECIMIENTO (+)<br>TRANSFERENCIA (-)</th>
+        <th>TOTAL</th>
+        <th>DIFERENCIA</th>
+      </tr>
+    </thead>
+    <tbody id="rpt-esp-body"></tbody>
+    <tfoot id="rpt-esp-foot"></tfoot>
+  </table>
+
+  <!-- Observaciones -->
+  <table class="rpt-meta" style="margin-top:8px">
+    <tr>
+      <td class="rml" style="width:120px">OBSERVACIÓN:</td>
+      <td class="rmv" id="rpt-obs" style="min-height:30px"></td>
+    </tr>
+  </table>
+
+  <!-- Firmas -->
+  <div class="rpt-sigs">
+    <div class="rpt-sig">
+      <div class="rpt-sig-line"></div>
+      <div class="rpt-sig-name" id="rpt-sig-fisc"></div>
+      <div class="rpt-sig-role">FISCALIZADOR(ES)</div>
+    </div>
+    <div class="rpt-sig">
+      <div class="rpt-sig-line"></div>
+      <div class="rpt-sig-name" id="rpt-sig-sup"></div>
+      <div class="rpt-sig-role">SUPERVISOR DE CAJA</div>
+    </div>
+  </div>
+
+  <div class="rpt-footer">Generado por Sistema de Arqueo EPMPTP · <span id="rpt-ts"></span></div>
+</div>
+
+<script>
+/* ═══ DATOS MAESTROS ═══════════════════════════════════════════ */
+const FISCS = ['Anita Purcachi','Marco Granja','Edwin Huertas','Jose Luis Quimbiulco'];
+
+const PARADAS = {
+  trolebús:{
+    normales:[
+      'Quitumbe 1','Quitumbe 2','Quitumbe 3','Cóndor Ñan','Amaru Ñan',
+      'Morán Valverde 1','Morán Valverde 2','Turubamba','Quimiag','Mayorista',
+      'Solanda','Ajaví','Internacional','Quito Sur','España 1','España 2',
+      'Calzado','El Recreo 1','El Recreo 2','El Recreo 3','Villa Flora 1',
+      'Villa Flora 2','Chimbacalle 1','Chimbacalle 2','Colina','Jefferson Pérez',
+      'La Recoleta 1','La Recoleta 2','Cumandá 1','Cumandá 2',
+      'Santo Domingo 1','Santo Domingo 2','Plaza Marín','Plaza Chica','Plaza del Teatro'
+    ],
+    alim:['El Recreo Alimentadores','Morán Valverde Alimentadores','Quitumbe Alimentadores','Forestal Alimentadores']
+  },
+  ecovia:{
+    normales:[
+      'Sixto 2','Sixto 1','Santo Tomás','Caupicho','Beaterio',
+      'Bretania','Guayanañan','Quitumbe Oriental','Quillallacta','Otoya',
+      'Estación Capulí 2','Estación Capulí 1','Pacarillacta','Puente de Guajaló',
+      'San Cristóbal','Ayapamba','El Comercio','San Bartolo','Epiclachima',
+      'Pujilí','Estadio Chimbacalle','Teatro México','Col. Montúfar',
+      'Playón Marín 2','Playón Marín 1'
+    ],
+    alim:['Sixto Alimentadores','Quitumbe Oriental Alimentadores','Capulí Alimentadores','Puente de Guajaló Alimentadores','Playón Alimentadores']
+  },
+  surOcc:{
+    normales:[
+      'Hda. El Carmen','Fundeporte','Chillogallo','Sta. Rita','Sta. Bárbara',
+      'Mena 2','Biloxi','La Santiago','Alonso de Angulo','El Pintado',
+      'La Magdalena','La Mascota','Dos Puentes S-N','Dos Puentes N-S',
+      'San Diego','San Roque','El Tejar','IESS','U. Central','Seminario','Seminario 2'
+    ],
+    alim:[]
+  }
+};
+
+// Tipos de boleto por corredor
+const ESP_TYPES = {
+  trolebús:[
+    {id:'ba35',lbl:'B. Alimentador $0.35',val:0.35,badge:'b-alm',grupo:'alim'},
+    {id:'ba17',lbl:'B. Alimentador $0.17',val:0.17,badge:'b-alm',grupo:'alim'},
+    {id:'ba10',lbl:'B. Alimentador $0.10',val:0.10,badge:'b-alm',grupo:'alim'},
+    {id:'bp35',lbl:'B. Parada $0.35',val:0.35,badge:'b-par',grupo:'par'},
+    {id:'bp17',lbl:'B. Parada $0.17',val:0.17,badge:'b-par',grupo:'par'},
+    {id:'bp10',lbl:'B. Parada $0.10',val:0.10,badge:'b-par',grupo:'par'},
+    {id:'fichas',lbl:'Fichas $0.12',val:0.12,badge:'b-fi',grupo:'fix'},
+    {id:'tour050',lbl:'B. Trole Tour $0.50',val:0.50,badge:'b-fix',grupo:'fix'},
+    {id:'tour100',lbl:'B. Trole Tour $1.00',val:1.00,badge:'b-fix',grupo:'fix'},
+    {id:'tour200',lbl:'B. Trole Tour $2.00',val:2.00,badge:'b-fix',grupo:'fix'},
+  ],
+  ecovia:[
+    {id:'ba35',lbl:'B. Alimentador $0.35',val:0.35,badge:'b-alm',grupo:'alim'},
+    {id:'ba17',lbl:'B. Alimentador $0.17',val:0.17,badge:'b-alm',grupo:'alim'},
+    {id:'ba10',lbl:'B. Alimentador $0.10',val:0.10,badge:'b-alm',grupo:'alim'},
+    {id:'bp35',lbl:'B. Parada $0.35',val:0.35,badge:'b-par',grupo:'par'},
+    {id:'bp17',lbl:'B. Parada $0.17',val:0.17,badge:'b-par',grupo:'par'},
+    {id:'bp10',lbl:'B. Parada $0.10',val:0.10,badge:'b-par',grupo:'par'},
+    {id:'fichas',lbl:'Fichas $0.17',val:0.17,badge:'b-fi',grupo:'fix'},
+  ],
+  surOcc:[
+    {id:'bp35',lbl:'B. Parada $0.35',val:0.35,badge:'b-par',grupo:'par'},
+    {id:'bp17',lbl:'B. Parada $0.17',val:0.17,badge:'b-par',grupo:'par'},
+    {id:'bp10',lbl:'B. Parada $0.10',val:0.10,badge:'b-par',grupo:'par'},
+    {id:'fichas',lbl:'Fichas $0.17',val:0.17,badge:'b-fi',grupo:'fix'},
+    {id:'aero',lbl:'B. Aeropuerto $0.25',val:0.25,badge:'b-fix',grupo:'fix'},
+  ]
+};
+
+const DENOMS = [
+  {id:'m001',lbl:'Moneda $0.01',val:0.01,tipo:'M'},
+  {id:'m005',lbl:'Moneda $0.05',val:0.05,tipo:'M'},
+  {id:'m010',lbl:'Moneda $0.10',val:0.10,tipo:'M'},
+  {id:'m025',lbl:'Moneda $0.25',val:0.25,tipo:'M'},
+  {id:'m050',lbl:'Moneda $0.50',val:0.50,tipo:'M'},
+  {id:'m100',lbl:'Moneda $1.00',val:1.00,tipo:'M'},
+  {id:'b001',lbl:'Billete $1',val:1,tipo:'B'},
+  {id:'b005',lbl:'Billete $5',val:5,tipo:'B'},
+  {id:'b010',lbl:'Billete $10',val:10,tipo:'B'},
+  {id:'b020',lbl:'Billete $20',val:20,tipo:'B'},
+];
+
+const COR_INFO = {
+  trolebús:{nom:'Trolebús',tag:'t-tr',icon:'🚃'},
+  ecovia:{nom:'Sur Oriental (Ecovía)',tag:'t-so',icon:'🚌'},
+  surOcc:{nom:'Sur Occidental',tag:'t-sw',icon:'🚍'},
+};
+
+/* ═══ ESTADO ══════════════════════════════════════════════════ */
+let curUser=null, curArq={}, histFiltro='todos';
+let arqueos=LS('arqueos',[]);
+function LS(k,d){try{return JSON.parse(localStorage.getItem(k))??d}catch{return d}}
+function SLS(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch{}}
+
+/* ═══ UTILS ════════════════════════════════════════════════════ */
+const f$=n=>'$'+parseFloat(n||0).toFixed(2);
+const fi=id=>parseInt(document.getElementById(id)?.value||0)||0;
+const fv=id=>parseFloat(document.getElementById(id)?.value||0)||0;
+function toast(msg,d=2200){
+  const t=document.getElementById('toast');
+  t.textContent=msg;t.classList.add('on');
+  setTimeout(()=>t.classList.remove('on'),d);
+}
+function fmtFecha(iso){
+  const d=new Date(iso);
+  return d.toLocaleDateString('es-EC',{day:'2-digit',month:'short',year:'numeric'})+
+    ' '+d.toLocaleTimeString('es-EC',{hour:'2-digit',minute:'2-digit'});
+}
+function padDate(d){const p=n=>String(n).padStart(2,'0');
+  return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}`;}
+function padTime(d){const p=n=>String(n).padStart(2,'0');
+  return `${p(d.getHours())}:${p(d.getMinutes())}`;}
+function statusClass(s){return s==='ok'?'ok':s==='wa'?'wa':'er';}
+function statusLabel(s){return s==='ok'?'✅ OK':s==='wa'?'⚠️ REVISAR':'🔴 ERROR';}
+
+/* ═══ NAVEGACIÓN ════════════════════════════════════════════════ */
+function showScr(id){
+  document.querySelectorAll('.scr').forEach(s=>s.classList.remove('on'));
+  document.getElementById(id).classList.add('on');
+}
+function goHome(){refreshHome();showScr('s-home');
+  document.getElementById('nb-h').classList.add('on');
+  document.getElementById('nb-hi').classList.remove('on');}
+function goHist(){renderHist();showScr('s-hist');}
+
+/* ═══ LOGIN ════════════════════════════════════════════════════ */
+function renderFiscList(){
+  document.getElementById('fisc-list').innerHTML=
+    FISCS.map(f=>`<div class="fi" onclick="selFisc('${f}',this)">
+      <span>👤</span><span>${f}</span><span class="fck">✓</span>
+    </div>`).join('');
+}
+let selFiscName=null;
+function selFisc(n,el){
+  document.querySelectorAll('.fi').forEach(f=>f.classList.remove('sel'));
+  el.classList.add('sel');selFiscName=n;
+  document.getElementById('fisc-input').value='';
+}
+function doLogin(){
+  const inp=document.getElementById('fisc-input').value.trim();
+  const n=inp||selFiscName;
+  if(!n){toast('⚠️ Seleccione o ingrese su nombre');return;}
+  curUser=n;
+  document.getElementById('huser').textContent='👤 '+n;
+  goHome();
+}
+
+/* ═══ HOME ══════════════════════════════════════════════════════ */
+function refreshHome(){
+  const hoy=new Date().toDateString();
+  const h=arqueos.filter(a=>new Date(a.ts).toDateString()===hoy);
+  const dif=h.filter(a=>a.status!=='ok').length;
+  const tot=arqueos.length;
+  const okp=tot?Math.round(arqueos.filter(a=>a.status==='ok').length/tot*100):100;
+  document.getElementById('st-hoy').textContent=h.length;
+  document.getElementById('st-dif').textContent=dif;
+  document.getElementById('st-dif').style.color=dif?'var(--er)':'var(--ok)';
+  document.getElementById('st-tot').textContent=tot;
+  document.getElementById('st-ok').textContent=okp+'%';
+  document.getElementById('st-ok').style.color=okp>=90?'var(--ok)':okp>=70?'var(--wa)':'var(--er)';
+  const rc=document.getElementById('home-rec');
+  const rec=[...arqueos].reverse().slice(0,5);
+  if(!rec.length){rc.innerHTML=`<div class="empty"><span>📭</span><div>Sin arqueos aún</div><small>Toca Nuevo Arqueo para comenzar</small></div>`;return;}
+  rc.innerHTML=rec.map(a=>histCard(a)).join('');
+}
+
+/* ═══ ARQUEO: INICIO ════════════════════════════════════════════ */
+function iniciarArqueo(){
+  curArq={};resetPasos();
+  const n=new Date();
+  document.getElementById('p1-fecha').value=padDate(n);
+  document.getElementById('p1-hora').value=padTime(n);
+  showScr('s-arq');goP(1);
+}
+function backArqueo(){goHome();}
+function resetPasos(){
+  for(let i=1;i<=8;i++) document.getElementById('p'+i).style.display='none';
+}
+
+/* ═══ PROGRESS ══════════════════════════════════════════════════ */
+const P_LABELS=['Info','CT Fondo','CT Especies','Plan. Hoy','Plan. Mañana','Cto. Boletos','Cto. Dinero','Informe'];
+function updateProg(n){
+  document.getElementById('arq-sub').textContent=`Paso ${n} de 8`;
+  document.getElementById('arq-title').textContent=P_LABELS[n-1];
+  let h='';
+  for(let i=1;i<=8;i++){
+    const cls=i<n?'done':i===n?'act':'';
+    h+=`<div class="pd ${cls}"><div class="pc">${i<n?'✓':i}</div><div class="pl">${P_LABELS[i-1]}</div></div>`;
+  }
+  document.getElementById('arq-prog').innerHTML=h;
+}
+
+/* ═══ PASO 1 ════════════════════════════════════════════════════ */
+function selCor(k,el){
+  document.querySelectorAll('.cor-card').forEach(c=>c.classList.remove('sel'));
+  el.classList.add('sel');curArq.corredor=k;
+}
+function selTurno(t,el){
+  document.querySelectorAll('.tbtn').forEach(b=>b.classList.remove('sel'));
+  el.classList.add('sel');curArq.turno=t;
+}
+
+/* ═══ PASO 2: CT FONDO ══════════════════════════════════════════ */
+function buildFondoTable(){
+  if(!curArq.ctFondo) curArq.ctFondo={};
+  let html='';
+  DENOMS.forEach(d=>{
+    const sv=curArq.ctFondo[d.id]||{ent:0,saldo:0};
+    html+=`<tr>
+      <td class="dnm">${d.tipo==='B'?'💵':'🪙'} ${d.lbl}</td>
+      <td><input type="number" class="ni" id="fe-${d.id}" value="${sv.ent||''}" min="0" step="0.01"
+        oninput="calcFondoRow('${d.id}')"></td>
+      <td><input type="number" class="ni" id="fs-${d.id}" value="${sv.saldo||''}" min="0" step="0.01"
+        oninput="calcFondoRow('${d.id}')"></td>
+      <td class="dval" id="ft-${d.id}">${f$(sv.ent+sv.saldo)}</td>
+    </tr>`;
+  });
+  document.getElementById('fondo-body').innerHTML=html;
+  calcFondoTotals();
+}
+function calcFondoRow(id){
+  const e=parseFloat(document.getElementById('fe-'+id).value)||0;
+  const s=parseFloat(document.getElementById('fs-'+id).value)||0;
+  document.getElementById('ft-'+id).textContent=f$(e+s);
+  calcFondoTotals();
+}
+function calcFondoTotals(){
+  let te=0,ts=0;
+  DENOMS.forEach(d=>{
+    const e=parseFloat(document.getElementById('fe-'+d.id)?.value)||0;
+    const s=parseFloat(document.getElementById('fs-'+d.id)?.value)||0;
+    te+=e; ts+=s;
+  });
+  document.getElementById('fondo-foot').innerHTML=`<tr>
+    <td class="dnm" style="font-weight:700">TOTAL</td>
+    <td class="dval">${f$(te)}</td>
+    <td class="dval">${f$(ts)}</td>
+    <td class="dval">${f$(te+ts)}</td>
+  </tr>`;
+}
+function saveFondo(){
+  curArq.ctFondo={};
+  DENOMS.forEach(d=>{
+    const e=parseFloat(document.getElementById('fe-'+d.id)?.value||0)||0;
+    const s=parseFloat(document.getElementById('fs-'+d.id)?.value||0)||0;
+    curArq.ctFondo[d.id]={ent:e,saldo:s};
+  });
+}
+
+/* ═══ PASO 3: CT ESPECIES ═══════════════════════════════════════ */
+function buildEspTable(){
+  const cor=curArq.corredor;
+  if(!cor){toast('⚠️ Seleccione corredor primero');goP(1);return;}
+  if(!curArq.ctEsp) curArq.ctEsp={};
+  const types=ESP_TYPES[cor];
+  let html='';
+  types.forEach(t=>{
+    const sv=curArq.ctEsp[t.id]||{ent:0,bov:0};
+    html+=`<tr>
+      <td><span class="badge ${t.badge}">${t.lbl}</span></td>
+      <td><input type="number" class="ni" id="ee-${t.id}" value="${sv.ent}" min="0"
+        oninput="calcEspRow('${t.id}')"></td>
+      <td><input type="number" class="ni" id="eb-${t.id}" value="${sv.bov}" min="0"
+        oninput="calcEspRow('${t.id}')"></td>
+      <td class="eval" id="ek-${t.id}">${(sv.ent+sv.bov)}</td>
+    </tr>`;
+  });
+  document.getElementById('esp-body').innerHTML=html;
+}
+function calcEspRow(id){
+  const e=parseInt(document.getElementById('ee-'+id)?.value||0)||0;
+  const b=parseInt(document.getElementById('eb-'+id)?.value||0)||0;
+  document.getElementById('ek-'+id).textContent=(e+b);
+}
+function saveEsp(){
+  curArq.ctEsp={};
+  ESP_TYPES[curArq.corredor].forEach(t=>{
+    const e=parseInt(document.getElementById('ee-'+t.id)?.value||0)||0;
+    const b=parseInt(document.getElementById('eb-'+t.id)?.value||0)||0;
+    curArq.ctEsp[t.id]={ent:e,bov:b};
+  });
+}
+
+/* ═══ PASO 4 & 5: PLANILLAS ════════════════════════════════════ */
+function getPlaCols(cor,tipoParada){
+  // tipoParada: 'normal' o 'alim'
+  // Returns the ticket columns for this parada type
+  const isAlim = tipoParada==='alim';
+  const cols=[];
+  if(isAlim && (cor==='trolebús'||cor==='ecovia')){
+    cols.push({id:'ba35',lbl:'BA 0.35'},{id:'ba17',lbl:'BA 0.17'},{id:'ba10',lbl:'BA 0.10'});
+  } else {
+    cols.push({id:'bp35',lbl:'BP 0.35'},{id:'bp17',lbl:'BP 0.17'},{id:'bp10',lbl:'BP 0.10'});
+  }
+  return cols;
+}
+
+function buildPlanillasTable(paso){
+  const cor=curArq.corredor;
+  const paradas=PARADAS[cor];
+  const isMañana=paso===5;
+  const showCash=!isMañana; // $ Inicial solo en planillas de HOY normales
+  const dataKey=isMañana?'planMañana':'planHoy';
+  if(!curArq[dataKey]) curArq[dataKey]={};
+
+  let html='';
+  // Normales
+  const colsN=getPlaCols(cor,'normal');
+  html+=`<div class="card" style="margin-bottom:12px">
+    <div class="ch">🏪 Paradas Normales (${paradas.normales.length})</div>
+    <div class="cb" style="padding:8px">
+      <div class="ptbl-wrap">
+        <table class="ptbl">
+          <thead><tr>
+            <th class="sticky-col"># Parada</th>
+            ${colsN.map(c=>`<th>${c.lbl}</th>`).join('')}
+            ${showCash?'<th>$ Inicial</th>':''}
+          </tr></thead>
+          <tbody id="pt-n-${paso}">`;
+  paradas.normales.forEach((p,i)=>{
+    const idx='n'+(i+1);
+    const sv=curArq[dataKey][idx]||{};
+    const lockedCash=isMañana;
+    html+=`<tr><td class="sticky-col" title="${p}">${i+1}. ${p}</td>
+      ${colsN.map(c=>`<td><input type="number" class="pi" id="pi-${paso}-${idx}-${c.id}"
+        value="${sv[c.id]||0}" min="0" oninput="calcPlanRow(${paso},'${idx}')"></td>`).join('')}
+      ${showCash?`<td><input type="number" class="pi cash" id="pi-${paso}-${idx}-cash" value="${sv.cash||0}" min="0" step="0.01" oninput="calcPlanRow(${paso},'${idx}')"></td>`:''}
+    </tr>`;
+  });
+  html+=`</tbody>
+          <tfoot><tr class="tot-row">
+            <td class="sticky-col">TOTAL</td>
+            ${colsN.map(c=>`<td id="ptn-${paso}-${c.id}">0</td>`).join('')}
+            ${showCash?`<td id="ptn-${paso}-cash">$0.00</td>`:''}
+          </tr></tfoot>
+        </table>
+      </div>
+    </div></div>`;
+
+  // Alimentadoras (solo si hay)
+  if(paradas.alim && paradas.alim.length){
+    const colsA=getPlaCols(cor,'alim');
+    html+=`<div class="card" style="margin-bottom:12px">
+      <div class="ch" style="background:#1565C0">🔀 Paradas Alimentadoras (${paradas.alim.length})</div>
+      <div class="cb" style="padding:8px">
+        <div class="ptbl-wrap">
+          <table class="ptbl">
+            <thead><tr>
+              <th class="sticky-col"># Parada</th>
+              ${colsA.map(c=>`<th>${c.lbl}</th>`).join('')}
+            </tr></thead>
+            <tbody id="pt-a-${paso}">`;
+    paradas.alim.forEach((p,i)=>{
+      const idx='a'+(i+1);
+      const sv=curArq[dataKey][idx]||{};
+      const lockedCash=isMañana;
+      html+=`<tr><td class="sticky-col" title="${p}">${i+1}. ${p}</td>
+        ${colsA.map(c=>`<td><input type="number" class="pi" id="pi-${paso}-${idx}-${c.id}"
+          value="${sv[c.id]||0}" min="0" oninput="calcPlanRow(${paso},'${idx}')"></td>`).join('')}
+      </tr>`;
+    });
+    html+=`</tbody>
+            <tfoot><tr class="tot-row">
+              <td class="sticky-col">TOTAL</td>
+              ${colsA.map(c=>`<td id="pta-${paso}-${c.id}">0</td>`).join('')}
+            </tr></tfoot>
+          </table>
+        </div>
+      </div></div>`;
+  }
+  document.getElementById('p'+(paso===4?'4':'5')+'-content').innerHTML=html;
+  updatePlanTotals(paso);
+}
+
+function calcPlanRow(paso,idx){savePlan(paso);updatePlanTotals(paso);updatePlanVal(paso);}
+
+function savePlan(paso){
+  const cor=curArq.corredor;
+  const paradas=PARADAS[cor];
+  const dk=paso===4?'planHoy':'planMañana';
+  if(!curArq[dk]) curArq[dk]={};
+  // normales
+  paradas.normales.forEach((p,i)=>{
+    const idx='n'+(i+1);
+    const cols=getPlaCols(cor,'normal');
+    const row={};
+    cols.forEach(c=>{ row[c.id]=parseInt(document.getElementById(`pi-${paso}-${idx}-${c.id}`)?.value||0)||0; });
+    row.cash=parseFloat(document.getElementById(`pi-${paso}-${idx}-cash`)?.value||0)||0;
+    curArq[dk][idx]=row;
+  });
+  // alim
+  (paradas.alim||[]).forEach((p,i)=>{
+    const idx='a'+(i+1);
+    const cols=getPlaCols(cor,'alim');
+    const row={};
+    cols.forEach(c=>{ row[c.id]=parseInt(document.getElementById(`pi-${paso}-${idx}-${c.id}`)?.value||0)||0; });
+    row.cash=parseFloat(document.getElementById(`pi-${paso}-${idx}-cash`)?.value||0)||0;
+    curArq[dk][idx]=row;
+  });
+}
+
+function updatePlanTotals(paso){
+  const cor=curArq.corredor;
+  const paradas=PARADAS[cor];
+  // normales
+  const colsN=getPlaCols(cor,'normal');
+  const totsN={cash:0};
+  colsN.forEach(c=>totsN[c.id]=0);
+  paradas.normales.forEach((p,i)=>{
+    const idx='n'+(i+1);
+    colsN.forEach(c=>{
+      totsN[c.id]+=(parseInt(document.getElementById(`pi-${paso}-${idx}-${c.id}`)?.value||0)||0);
+    });
+    totsN.cash+=(parseFloat(document.getElementById(`pi-${paso}-${idx}-cash`)?.value||0)||0);
+  });
+  colsN.forEach(c=>{ const el=document.getElementById(`ptn-${paso}-${c.id}`); if(el) el.textContent=totsN[c.id]; });
+  const elc=document.getElementById(`ptn-${paso}-cash`); if(elc) elc.textContent=f$(totsN.cash);
+
+  // alim
+  if(paradas.alim && paradas.alim.length){
+    const colsA=getPlaCols(cor,'alim');
+    const totsA={cash:0};
+    colsA.forEach(c=>totsA[c.id]=0);
+    paradas.alim.forEach((p,i)=>{
+      const idx='a'+(i+1);
+      colsA.forEach(c=>{ totsA[c.id]+=(parseInt(document.getElementById(`pi-${paso}-${idx}-${c.id}`)?.value||0)||0); });
+      totsA.cash+=(parseFloat(document.getElementById(`pi-${paso}-${idx}-cash`)?.value||0)||0);
+    });
+    colsA.forEach(c=>{ const el=document.getElementById(`pta-${paso}-${c.id}`); if(el) el.textContent=totsA[c.id]; });
+    const elca=document.getElementById(`pta-${paso}-cash`); if(elca) elca.textContent=f$(totsA.cash);
+  }
+}
+
+function calcSumPlan(paso, espId){
+  const cor=curArq.corredor;
+  const paradas=PARADAS[cor];
+  let total=0;
+  // normales
+  const colsN=getPlaCols(cor,'normal');
+  if(colsN.find(c=>c.id===espId)){
+    paradas.normales.forEach((p,i)=>{
+      total+=parseInt(document.getElementById(`pi-${paso}-n${i+1}-${espId}`)?.value||0)||0;
+    });
+  }
+  // alim
+  if(paradas.alim){
+    const colsA=getPlaCols(cor,'alim');
+    if(colsA.find(c=>c.id===espId)){
+      paradas.alim.forEach((p,i)=>{
+        total+=parseInt(document.getElementById(`pi-${paso}-a${i+1}-${espId}`)?.value||0)||0;
+      });
+    }
+  }
+  return total;
+}
+function calcSumCash(paso){
+  const cor=curArq.corredor;
+  const paradas=PARADAS[cor];
+  let total=0;
+  paradas.normales.forEach((p,i)=>{ total+=parseFloat(document.getElementById(`pi-${paso}-n${i+1}-cash`)?.value||0)||0; });
+  (paradas.alim||[]).forEach((p,i)=>{ total+=parseFloat(document.getElementById(`pi-${paso}-a${i+1}-cash`)?.value||0)||0; });
+  return total;
+}
+
+function updatePlanVal(paso){
+  if(paso===4) renderP4Val();
+  if(paso===5) renderP5Val();
+}
+
+/* Validación P4 */
+function renderP4Val(){
+  const cor=curArq.corredor;
+  const types=ESP_TYPES[cor].filter(t=>t.grupo!=='fix');
+  let html='';
+  // Boletos
+  types.forEach(t=>{
+    const sum=calcSumPlan(4,t.id);
+    const exp=(curArq.ctEsp||{})[t.id]?.ent||0;
+    const diff=exp-sum;
+    const cls=Math.abs(diff)<1?'ok':'er';
+    html+=`<div class="val-row">
+      <div class="val-lbl">${t.lbl}<small>Planillas: ${sum} / CT Entregado: ${exp}</small></div>
+      <div class="chip ${cls}">${diff===0?'✅ OK':diff>0?`⬆ Faltan ${diff}`:` ⬇ Sobran ${Math.abs(diff)}`}</div>
+    </div>`;
+  });
+  // Efectivo
+  const sumC=calcSumCash(4);
+  const expC=DENOMS.reduce((a,d)=>a+(((curArq.ctFondo||{})[d.id]?.ent)||0),0);
+  const diffC=expC-sumC;
+  html+=`<div class="val-row">
+    <div class="val-lbl">💵 Efectivo inicial total<small>Planillas: ${f$(sumC)} / CT Entregado: ${f$(expC)}</small></div>
+    <div class="chip ${Math.abs(diffC)<0.02?'ok':'er'}">${Math.abs(diffC)<0.02?'✅ OK':diffC>0?`⬆ ${f$(diffC)}`:`⬇ ${f$(Math.abs(diffC))}`}</div>
+  </div>`;
+  document.getElementById('p4-val-body').innerHTML=html;
+}
+
+/* Validación P5 — Stock Libre */
+function renderP5Val(){
+  const cor=curArq.corredor;
+  const types=ESP_TYPES[cor].filter(t=>t.grupo!=='fix');
+  let html='';
+  types.forEach(t=>{
+    const enBov=(curArq.ctEsp||{})[t.id]?.bov||0;
+    const sumMan=calcSumPlan(5,t.id);
+    const libre=enBov-sumMan;
+    const cls=libre>=0?'ok':'er';
+    html+=`<div class="val-row">
+      <div class="val-lbl">${t.lbl}<small>En Bóveda: ${enBov} − Mañana: ${sumMan}</small></div>
+      <div class="dbox ${cls==='ok'?'':'er'}" style="min-width:80px;padding:6px 10px;font-size:13px;border-radius:8px;font-weight:900">
+        📦 ${libre}
+      </div>
+    </div>`;
+  });
+  document.getElementById('p5-val-body').innerHTML=html||'<div style="padding:8px;color:var(--tx2);font-size:13px">Complete las planillas de mañana para ver el stock libre.</div>';
+}
+
+/* Guardar planillas desde estado */
+function savePlanFromState(paso){savePlan(paso);}
+
+/* ═══ PASO 6: CONTEO BOLETOS ════════════════════════════════════ */
+function buildConteoBoletos(){
+  const cor=curArq.corredor;
+  const types=ESP_TYPES[cor];
+  if(!curArq.ctBol) curArq.ctBol={};
+  let html='';
+  types.forEach(t=>{
+    // Para tipos fix: target = ESP en bóveda directamente
+    // Para par/alim: target = stock libre = en bóveda - suma mañana
+    let target=0;
+    if(t.grupo==='fix'){
+      target=(curArq.ctEsp||{})[t.id]?.bov||0;
+    } else {
+      const enBov=(curArq.ctEsp||{})[t.id]?.bov||0;
+      const sumMan=getSumPlan(t.id,'mañana');
+      target=enBov-sumMan;
+    }
+    const fisico=curArq.ctBol[t.id]||0;
+    const diff=target-fisico;
+    html+=`<div class="cfield">
+      <div class="c-target">
+        <div class="ct-lbl">${t.lbl} ${t.grupo==='fix'?'<span style="font-size:10px;color:var(--tx2)">(fijo)</span>':''}</div>
+        <div class="ct-val">Objetivo: ${target}</div>
+      </div>
+      <div class="c-input-wrap">
+        <label>Físico contado</label>
+        <input type="number" class="ni" id="cb-${t.id}" value="${fisico}" min="0"
+          oninput="calcDiffBol('${t.id}',${target})">
+      </div>
+      <div class="c-diff ${Math.abs(diff)<1?'ok':'er'}" id="cbd-${t.id}">
+        ${diff===0?'✅ OK':diff>0?`-${diff}`:'+'+Math.abs(diff)}
+      </div>
+    </div>`;
+  });
+  document.getElementById('p6-body').innerHTML=html;
+}
+function getSumPlan(espId,tipo){
+  const cor=curArq.corredor;
+  const paradas=PARADAS[cor];
+  const dk=tipo==='mañana'?'planMañana':'planHoy';
+  const plan=curArq[dk]||{};
+  let t=0;
+  Object.values(plan).forEach(p=>{ t+=p[espId]||0; });
+  return t;
+}
+function calcDiffBol(id,target){
+  const f=parseInt(document.getElementById('cb-'+id).value||0)||0;
+  const diff=target-f;
+  const el=document.getElementById('cbd-'+id);
+  el.textContent=diff===0?'✅ OK':diff>0?`-${diff}`:'+'+Math.abs(diff);
+  el.className='c-diff '+(Math.abs(diff)<1?'ok':'er');
+  curArq.ctBol=curArq.ctBol||{};
+  curArq.ctBol[id]=f;
+}
+function saveConteoBol(){
+  const cor=curArq.corredor;
+  curArq.ctBol={};
+  ESP_TYPES[cor].forEach(t=>{
+    curArq.ctBol[t.id]=parseInt(document.getElementById('cb-'+t.id)?.value||0)||0;
+  });
+}
+
+/* ═══ PASO 7: CONTEO DINERO ════════════════════════════════════ */
+function buildConteoDinero(){
+  if(!curArq.ctDin) curArq.ctDin={};
+  let html='';
+  DENOMS.forEach(d=>{
+    const saldo=((curArq.ctFondo||{})[d.id]?.saldo)||0;
+    const fisico=(curArq.ctDin[d.id]||0);
+    const diff=saldo-fisico;
+    html+=`<div class="cfield">
+      <div class="c-target">
+        <div class="ct-lbl">${d.lbl}</div>
+        <div class="ct-val">${f$(saldo)}</div>
+      </div>
+      <div class="c-input-wrap">
+        <label>Físico ($)</label>
+        <input type="number" class="ni" id="cd-${d.id}" value="${fisico}" min="0" step="0.01"
+          oninput="calcDiffDin('${d.id}',${saldo})">
+      </div>
+      <div class="c-diff ${Math.abs(diff)<0.02?'ok':'er'}" id="cdd-${d.id}">
+        ${Math.abs(diff)<0.02?'✅ OK':diff>0?`-${f$(diff)}`:'+'+f$(Math.abs(diff))}
+      </div>
+    </div>`;
+  });
+  document.getElementById('p7-body').innerHTML=html;
+}
+function calcDiffDin(id,target){
+  const f=parseFloat(document.getElementById('cd-'+id).value||0)||0;
+  const diff=target-f;
+  const el=document.getElementById('cdd-'+id);
+  el.textContent=Math.abs(diff)<0.02?'✅ OK':diff>0?`-${f$(diff)}`:'+'+f$(Math.abs(diff));
+  el.className='c-diff '+(Math.abs(diff)<0.02?'ok':'er');
+}
+function saveConteoDin(){
+  curArq.ctDin={};
+  DENOMS.forEach(d=>{
+    curArq.ctDin[d.id]=parseFloat(document.getElementById('cd-'+d.id)?.value||0)||0;
+  });
+}
+
+/* ═══ PASO 8: INFORME FINAL ════════════════════════════════════ */
+function buildInforme(){
+  const cor=curArq.corredor;
+  const ci=COR_INFO[cor];
+  // Determine overall status
+  const allDiffs=[];
+  ESP_TYPES[cor].forEach(t=>{
+    let target=t.grupo==='fix'?(curArq.ctEsp||{})[t.id]?.bov||0:
+      ((curArq.ctEsp||{})[t.id]?.bov||0)-getSumPlan(t.id,'mañana');
+    allDiffs.push(target-(curArq.ctBol||{})[t.id]||0);
+  });
+  const totalFondoDiff=DENOMS.reduce((a,d)=>{
+    const s=((curArq.ctFondo||{})[d.id]?.saldo)||0;
+    const f=(curArq.ctDin||{})[d.id]||0;
+    return a+Math.abs(s-f);
+  },0);
+  const maxBolDiff=Math.max(...allDiffs.map(Math.abs));
+  let status='ok';
+  if(maxBolDiff>10||totalFondoDiff>1) status='er';
+  else if(maxBolDiff>0||totalFondoDiff>0.01) status='wa';
+  curArq.status=status;
+
+  // Banner
+  document.getElementById('p8-banner').innerHTML=`<div class="sb ${status}">
+    <span class="si">${status==='ok'?'✅':status==='wa'?'⚠️':'🔴'}</span>
+    <div class="st">${statusLabel(status)}</div>
+    <div class="ss">${status==='ok'?'Bóveda verificada sin diferencias':
+      'Se detectaron diferencias — revisar observaciones'}</div>
+  </div>`;
+
+  // Info general
+  document.getElementById('p8-info').innerHTML=`
+    <div class="irow"><div class="il">Corredor</div><div class="iv"><span class="fcor-tag ${ci.tag}">${ci.icon} ${ci.nom}</span></div></div>
+    <div class="irow"><div class="il">Turno</div><div class="iv">${curArq.turno}</div></div>
+    <div class="irow"><div class="il">Fecha</div><div class="iv">${curArq.fecha}</div></div>
+    <div class="irow"><div class="il">Hora Inicio</div><div class="iv">${curArq.horaInicio}</div></div>
+    <div class="irow"><div class="il">Supervisor de Caja</div><div class="iv">${curArq.supervisor||'—'}</div></div>
+    <div class="irow"><div class="il">Fondo Fijo Certificado</div><div class="iv">${f$(curArq.fondoFijo)}</div></div>
+    <div class="irow"><div class="il">Fiscalizador</div><div class="iv">👤 ${curUser}</div></div>`;
+
+  // Fondo
+  const teEnt=DENOMS.reduce((a,d)=>a+(((curArq.ctFondo||{})[d.id]?.ent)||0),0);
+  const teSal=DENOMS.reduce((a,d)=>a+(((curArq.ctFondo||{})[d.id]?.saldo)||0),0);
+  const teFis=DENOMS.reduce((a,d)=>a+((curArq.ctDin||{})[d.id]||0),0);
+  const teKardex=teEnt+teSal;
+  const teDiffF=teSal-teFis;
+  document.getElementById('p8-fondo').innerHTML=`
+    <div class="irow"><div class="il">Entregado según planillas</div><div class="iv">${f$(teEnt)}</div></div>
+    <div class="irow"><div class="il">Saldo de Caja (CT)</div><div class="iv">${f$(teSal)}</div></div>
+    <div class="irow"><div class="il">Fondo Fijo Total (Kardex)</div><div class="iv">${f$(teKardex)}</div></div>
+    <div class="irow"><div class="il">Físico contado en bóveda</div><div class="iv">${f$(teFis)}</div></div>
+    <div class="irow" style="background:${Math.abs(teDiffF)<0.02?'var(--ok-bg)':'var(--er-bg)'}">
+      <div class="il"><strong>Diferencia Fondo</strong></div>
+      <div class="iv ${Math.abs(teDiffF)<0.02?'ok':'er'}">${Math.abs(teDiffF)<0.02?'✅ Cuadra':f$(Math.abs(teDiffF))}</div>
+    </div>`;
+
+  // Especies
+  let espHtml='';
+  ESP_TYPES[cor].forEach(t=>{
+    const ent=(curArq.ctEsp||{})[t.id]?.ent||0;
+    const bov=(curArq.ctEsp||{})[t.id]?.bov||0;
+    const kardex=ent+bov;
+    const sumMan=getSumPlan(t.id,'mañana');
+    const libre=t.grupo==='fix'?bov:bov-sumMan;
+    const fisico=(curArq.ctBol||{})[t.id]||0;
+    const diff=libre-fisico;
+    espHtml+=`<div class="irow" style="background:${Math.abs(diff)<1?'':Math.abs(diff)<5?'var(--wa-bg)':'var(--er-bg)'}">
+      <div class="il"><span class="badge ${t.badge}">${t.lbl}</span><br>
+        <small style="font-size:10px;color:var(--tx2)">Kardex:${kardex} | Entr:${ent} | Bóv:${bov} | Libre:${libre} | Fís:${fisico}</small>
+      </div>
+      <div class="iv ${Math.abs(diff)<1?'ok':Math.abs(diff)<5?'wa':'er'}">${Math.abs(diff)<1?'✅':diff>0?`-${diff}`:'+'+Math.abs(diff)}</div>
+    </div>`;
+  });
+  document.getElementById('p8-esp').innerHTML=espHtml;
+
+  document.getElementById('p8-firma').textContent='Firma: '+curUser+' — Confirmo el arqueo realizado';
+  const now=new Date();
+  document.getElementById('p8-hora-fin').value=padTime(now);
+}
+
+/* ═══ GUARDAR ═══════════════════════════════════════════════════ */
+function guardarArqueo(){
+  const horaFin=document.getElementById('p8-hora-fin').value;
+  const obs=document.getElementById('p8-obs').value;
+  const id='ARQ-'+Date.now();
+  const a={
+    ...curArq, id,
+    fiscalizador:curUser,
+    horaFin, obs,
+    ts:new Date().toISOString()
+  };
+  arqueos.push(a);
+  SLS('arqueos',arqueos);
+  toast('✅ Arqueo guardado correctamente');
+  setTimeout(()=>goHome(),900);
+}
+
+/* ═══ ORQUESTADOR DE PASOS ══════════════════════════════════════ */
+function goP(n){
+  // Validar y guardar paso actual antes de avanzar
+  const cur=curArq._paso||1;
+  if(n>cur){
+    if(cur===1){
+      if(!curArq.corredor){toast('⚠️ Seleccione un corredor');return;}
+      if(!curArq.turno){toast('⚠️ Seleccione el turno');return;}
+      curArq.fecha=document.getElementById('p1-fecha').value;
+      curArq.horaInicio=document.getElementById('p1-hora').value;
+      curArq.supervisor=document.getElementById('p1-sup').value;
+      curArq.fondoFijo=parseFloat(document.getElementById('p1-fondo').value||0)||0;
+    }
+    if(cur===2) saveFondo();
+    if(cur===3) saveEsp();
+    if(cur===4){savePlan(4);renderP4Val();}
+    if(cur===5){savePlan(5);renderP5Val();}
+    if(cur===6) saveConteoBol();
+    if(cur===7) saveConteoDin();
+  }
+  // Ocultar todos
+  for(let i=1;i<=8;i++) document.getElementById('p'+i).style.display='none';
+  document.getElementById('p'+n).style.display='';
+  curArq._paso=n;
+  updateProg(n);
+  try{document.getElementById('p'+n).scrollTop=0;}catch(e){}
+
+  // Inicializar el paso si es la primera vez
+  if(n===2) buildFondoTable();
+  if(n===3) buildEspTable();
+  if(n===4) buildPlanillasTable(4);
+  if(n===5) buildPlanillasTable(5);
+  if(n===6) buildConteoBoletos();
+  if(n===7) buildConteoDinero();
+  if(n===8) buildInforme();
+}
+
+/* ═══ HISTORIAL ═════════════════════════════════════════════════ */
+function histCard(a){
+  const ci=COR_INFO[a.corredor]||{nom:a.corredor,tag:'',icon:'🚌'};
+  const s=a.status||'ok';
+  return `<div class="hi ${s}" onclick="showDetail('${a.id}')">
+    <div class="hic"></div>
+    <div class="hib">
+      <div class="hit">
+        <span class="hinm">${ci.icon} ${ci.nom}</span>
+        <span class="hbg ${s}">${statusLabel(s)}</span>
+      </div>
+      <div class="him">📅 ${fmtFecha(a.ts)} · ⏰ ${a.turno||''} · 👤 ${a.fiscalizador}</div>
+    </div>
+  </div>`;
+}
+function renderHist(){
+  let data=[...arqueos].reverse();
+  if(histFiltro!=='todos') data=data.filter(a=>a.status===histFiltro);
+  const div=document.getElementById('hist-list');
+  if(!data.length){div.innerHTML=`<div class="empty"><span>📭</span><div>Sin arqueos</div></div>`;return;}
+  div.innerHTML=data.map(a=>histCard(a)).join('');
+}
+function filtHist(t,el){
+  histFiltro=t;
+  document.querySelectorAll('#hf-bar .chip').forEach(c=>{
+    c.style.background='';c.style.color='';c.style.border='';
+  });
+  el.style.background='var(--pri)';el.style.color='#fff';
+  renderHist();
+}
+function showDetail(id){
+  const a=arqueos.find(x=>x.id===id);
+  if(!a) return;
+  const ci=COR_INFO[a.corredor]||{nom:a.corredor,tag:'',icon:'🚌'};
+  document.getElementById('modal-title').textContent=`Arqueo ${fmtFecha(a.ts)}`;
+  document.getElementById('modal-body').innerHTML=`
+    <div class="sb ${a.status}" style="margin-bottom:12px">
+      <span class="si">${a.status==='ok'?'✅':a.status==='wa'?'⚠️':'🔴'}</span>
+      <div class="st">${statusLabel(a.status)}</div>
+    </div>
+    <div class="card"><div class="ch">📍 Datos Generales</div><div class="cb">
+      <div class="irow"><div class="il">Corredor</div><div class="iv"><span class="fcor-tag ${ci.tag}">${ci.icon} ${ci.nom}</span></div></div>
+      <div class="irow"><div class="il">Turno</div><div class="iv">${a.turno}</div></div>
+      <div class="irow"><div class="il">Fecha</div><div class="iv">${a.fecha}</div></div>
+      <div class="irow"><div class="il">Inicio</div><div class="iv">${a.horaInicio}</div></div>
+      <div class="irow"><div class="il">Fin</div><div class="iv">${a.horaFin||'—'}</div></div>
+      <div class="irow"><div class="il">Supervisor</div><div class="iv">${a.supervisor||'—'}</div></div>
+      <div class="irow"><div class="il">Fiscalizador</div><div class="iv">👤 ${a.fiscalizador}</div></div>
+      ${a.obs?`<div class="irow"><div class="il">Observaciones</div><div class="iv" style="font-size:12px">${a.obs}</div></div>`:''}
+    </div></div>
+    <div style="font-size:11px;color:var(--tx2);text-align:center;padding:8px">ID: ${a.id}</div>
+    <button class="btn btn-p" style="background:#6A1B9A;box-shadow:0 4px 14px rgba(106,27,154,.3);margin:4px 0 8px"
+      onclick="imprimirDesdeHistorial('${a.id}')">🖨️ Imprimir / Guardar PDF</button>`;
+  document.getElementById('modal-ov').classList.add('on');
+}
+function closeModal(e){
+  if(!e||e.target===document.getElementById('modal-ov')||e.target.closest('.mc'))
+    document.getElementById('modal-ov').classList.remove('on');
+}
+
+/* ═══ EXPORT ════════════════════════════════════════════════════ */
+function exportCSV(){
+  if(!arqueos.length){toast('⚠️ Sin arqueos para exportar');return;}
+  let csv='ID,Fecha,Fiscalizador,Corredor,Turno,Status,Supervisor\n';
+  arqueos.forEach(a=>{
+    const ci=COR_INFO[a.corredor]||{nom:a.corredor};
+    csv+=`${a.id},${fmtFecha(a.ts)},${a.fiscalizador},${ci.nom},${a.turno||''},${a.status},${a.supervisor||''}\n`;
+  });
+  const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});
+  const url=URL.createObjectURL(blob);
+  const l=document.createElement('a');
+  l.href=url;l.download=`arqueos_epmptp_${padDate(new Date())}.csv`;l.click();
+  toast('📥 Exportando CSV...');
+}
+
+/* ═══ IMPRIMIR / PDF ════════════════════════════════════════════ */
+
+/* CSS embebido en el iframe de impresión */
+const PRINT_CSS=`
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:Arial,Helvetica,sans-serif;font-size:8.5pt;color:#000;background:#fff;padding:8mm}
+@page{size:A4 portrait;margin:10mm 8mm}
+/* Encabezado */
+.rpt-top{display:flex;align-items:center;gap:10px;border:2px solid #000;padding:6px 10px;margin-bottom:4px}
+.rpt-logo{font-size:18pt;font-weight:900;color:#1a237e;border:2px solid #1a237e;padding:4px 8px;border-radius:4px;white-space:nowrap}
+.rpt-inst{flex:1;text-align:center}
+.rpt-inst-name{font-size:9pt;font-weight:700;text-transform:uppercase}
+.rpt-inst-sub{font-size:8pt;margin-top:2px}
+.rpt-inst-title{font-size:11pt;font-weight:900;text-transform:uppercase;border-top:1px solid #000;margin-top:4px;padding-top:3px;letter-spacing:.5px}
+/* Meta tabla */
+.rpt-meta{width:100%;border-collapse:collapse;margin-bottom:5px}
+.rpt-meta td{border:1px solid #000;padding:3px 6px;font-size:8pt}
+.rml{font-weight:700;background:#e8eaf6;white-space:nowrap;min-width:110px}
+.rmv{min-width:80px}
+/* Estado */
+.rpt-status{text-align:center;padding:5px;font-size:11pt;font-weight:900;border:2px solid;margin-bottom:5px;letter-spacing:1px}
+/* Sección */
+.rpt-sec{font-size:9pt;font-weight:700;text-transform:uppercase;background:#1a237e;color:#fff;padding:4px 8px;margin-bottom:0;letter-spacing:.3px;margin-top:8px}
+/* Tabla */
+.rpt-tbl{width:100%;border-collapse:collapse;font-size:8pt;margin-bottom:4px}
+.rpt-tbl th{background:#1a237e;color:#fff;border:1px solid #000;padding:4px 5px;text-align:center;font-size:7.5pt;font-weight:700;line-height:1.3}
+.rpt-tbl td{border:1px solid #000;padding:3px 5px;font-size:8pt;vertical-align:middle;text-align:center}
+.rpt-tbl td:nth-child(2){text-align:left}
+.rpt-tbl tfoot tr:first-child td{font-weight:700;background:#e8eaf6}
+/* Diferencias */
+.ok{color:#2e7d32;font-weight:700}
+.er{color:#c62828;font-weight:700}
+.wa{color:#e65100;font-weight:700}
+.diff-row{background:#ffebee}
+.wa-row{background:#fff3e0}
+/* Obs */
+.rpt-obs-tbl{width:100%;border-collapse:collapse;margin-top:6px}
+.rpt-obs-tbl td{border:1px solid #000;padding:4px 6px;font-size:8pt}
+/* Firmas */
+.rpt-sigs{display:flex;justify-content:space-around;margin-top:24px;gap:20px}
+.rpt-sig{text-align:center;flex:1}
+.rpt-sig-line{border-top:1.5px solid #000;margin-bottom:4px;margin-top:36px}
+.rpt-sig-name{font-size:9pt;font-weight:700}
+.rpt-sig-role{font-size:8pt;color:#333;text-transform:uppercase;font-weight:600}
+/* Footer */
+.rpt-footer{text-align:center;font-size:7pt;color:#666;border-top:1px solid #ccc;margin-top:8px;padding-top:4px}
+`;
+
+function buildPrintHTML(arq, userFisc){
+  const cor=arq.corredor||'';
+  const ci=COR_INFO[cor]||{nom:cor||'—'};
+  const now=new Date();
+
+  /* ── META ── */
+  const fecha=arq.fecha||'—';
+  const turno=arq.turno||'—';
+  const supervisor=arq.supervisor||'—';
+  const horaInicio=arq.horaInicio||'—';
+  const horaFin=arq.horaFin||document.getElementById('p8-hora-fin')?.value||'—';
+  const fondoFijo=f$(arq.fondoFijo||0);
+  const fiscalizador=userFisc||arq.fiscalizador||'—';
+  const obs=arq.obs||document.getElementById('p8-obs')?.value||'Sin observaciones';
+
+  /* ── STATUS ── */
+  const st=arq.status||'wa';
+  const stBg={ok:'#e8f5e9',wa:'#fff3e0',er:'#ffebee'};
+  const stFg={ok:'#2e7d32',wa:'#e65100',er:'#c62828'};
+  const stTxt={ok:'ARQUEO CORRECTO — BOVEDA CUADRADA',wa:'REVISAR — SE DETECTARON DIFERENCIAS',er:'ERROR — DIFERENCIAS SIGNIFICATIVAS'};
+
+  /* ── SECCIÓN 1: FONDO FIJO ── */
+  let fondoRows=''; let tEnt=0,tSal=0,tFis=0;
+  DENOMS.forEach(d=>{
+    const ent=((arq.ctFondo||{})[d.id]?.ent)||0;
+    const sal=((arq.ctFondo||{})[d.id]?.saldo)||0;
+    const fis=(arq.ctDin||{})[d.id]||0;
+    const kar=ent+sal; tEnt+=ent; tSal+=sal; tFis+=fis;
+    const diff=sal-fis;
+    const rc=Math.abs(diff)<0.02?'':'diff-row';
+    fondoRows+=`<tr class="${rc}">
+      <td>${d.tipo==='M'?'Moneda':'Billete'}</td>
+      <td style="text-align:left">${d.lbl}</td>
+      <td>${f$(ent)}</td><td>${f$(sal)}</td><td>${f$(fis)}</td><td>${f$(kar)}</td>
+    </tr>`;
+  });
+  const tKar=tEnt+tSal; const tDiffF=tSal-tFis;
+  const dCls=Math.abs(tDiffF)<0.02?'ok':'er';
+  const dTxt=Math.abs(tDiffF)<0.02?'CUADRA':f$(Math.abs(tDiffF));
+
+  /* ── SECCIÓN 2: ESPECIES VALORADAS ── */
+  let espRows=''; let ttKar=0,ttEnt=0,ttFis=0,ttMan=0,ttLib=0;
+  const tipos=ESP_TYPES[cor]||[];
+  tipos.forEach(t=>{
+    const ent=((arq.ctEsp||{})[t.id]?.ent)||0;
+    const bov=((arq.ctEsp||{})[t.id]?.bov)||0;
+    const kar=ent+bov;
+    // calcular sumMan desde los datos guardados
+    let sumMan=0;
+    const plan=arq.planMañana||{};
+    Object.values(plan).forEach(p=>{ sumMan+=p[t.id]||0; });
+    const lib=t.grupo==='fix'?bov:bov-sumMan;
+    const fis=(arq.ctBol||{})[t.id]||0;
+    const diff=lib-fis;
+    ttKar+=kar; ttEnt+=ent; ttFis+=fis; ttMan+=sumMan; ttLib+=lib;
+    const rc=Math.abs(diff)<1?'':(Math.abs(diff)<5?'wa-row':'diff-row');
+    const dc=Math.abs(diff)<1?'ok':(Math.abs(diff)<5?'wa':'er');
+    const dt=Math.abs(diff)<1?'OK':(diff>0?'-'+diff:'+'+Math.abs(diff));
+    espRows+=`<tr class="${rc}">
+      <td style="font-size:7pt;font-weight:700">${t.badge.toUpperCase()}</td>
+      <td style="text-align:left">${t.lbl}</td>
+      <td>${kar}</td><td>${ent}</td><td>${fis}</td>
+      <td>${t.grupo==='fix'?'—':sumMan}</td><td>${lib}</td>
+      <td class="${dc}">${dt}</td>
+    </tr>`;
+  });
+  const ttDiff=ttLib-ttFis;
+  const tdCls=Math.abs(ttDiff)<1?'ok':'er';
+  const tdTxt=Math.abs(ttDiff)<1?'OK':(ttDiff>0?'-'+ttDiff:'+'+Math.abs(ttDiff));
+
+  return `<!DOCTYPE html><html lang="es"><head>
+<meta charset="UTF-8">
+<title>Arqueo Boveda EPMPTP</title>
+<style>${PRINT_CSS}</style>
+</head><body>
+
+<div class="rpt-top">
+  <div class="rpt-logo">EPMPTP</div>
+  <div class="rpt-inst">
+    <div class="rpt-inst-name">EMPRESA PUBLICA METROPOLITANA DE TRANSPORTE DE PASAJEROS DE QUITO</div>
+    <div class="rpt-inst-sub">COORDINACION DE FISCALIZACION OPERATIVA</div>
+    <div class="rpt-inst-title">ARQUEO DE VALORES EN BOVEDA</div>
+  </div>
+</div>
+
+<table class="rpt-meta">
+  <tr>
+    <td class="rml">CORREDOR:</td><td class="rmv" colspan="3">${ci.nom}</td>
+    <td class="rml">SUPERVISORES DE CAJA:</td><td class="rmv" colspan="2">${supervisor}</td>
+  </tr>
+  <tr>
+    <td class="rml">FECHA:</td><td class="rmv">${fecha}</td>
+    <td class="rml">HORA INICIO:</td><td class="rmv">${horaInicio}</td>
+    <td class="rml">HORA FINAL:</td><td class="rmv">${horaFin}</td>
+    <td class="rml">TURNO:</td><td class="rmv">${turno}</td>
+  </tr>
+  <tr>
+    <td class="rml">FONDO FIJO CERTIFICADO:</td><td class="rmv">${fondoFijo}</td>
+    <td class="rml">FISCALIZADOR(ES):</td><td class="rmv" colspan="4">${fiscalizador}</td>
+  </tr>
+</table>
+
+<div class="rpt-status" style="background:${stBg[st]};color:${stFg[st]};border-color:${stFg[st]}">
+  ${stTxt[st]}
+</div>
+
+<div class="rpt-sec">1. ARQUEO FONDO FIJO (DINERO)</div>
+<table class="rpt-tbl">
+  <thead><tr>
+    <th>TIPO</th><th style="text-align:left">DENOMINACION</th>
+    <th>ENTREGADO SEGUN PLANILLAS<br>(DESPACHADO)</th>
+    <th>SALDO EN CAJA<br>(ABASTECIMIENTO)</th>
+    <th>FISICO EN BOVEDA<br>(CONTADO)</th>
+    <th>TOTAL<br>(KARDEX)</th>
+  </tr></thead>
+  <tbody>${fondoRows}</tbody>
+  <tfoot>
+    <tr><td colspan="2" style="text-align:left">TOTALES</td>
+      <td>${f$(tEnt)}</td><td>${f$(tSal)}</td><td>${f$(tFis)}</td><td>${f$(tKar)}</td>
+    </tr>
+    <tr><td colspan="5" style="text-align:right;font-weight:700">DIFERENCIA FONDO:</td>
+      <td class="${dCls}">${dTxt}</td>
+    </tr>
+  </tfoot>
+</table>
+
+<div class="rpt-sec">2. ARQUEO ESPECIES VALORADAS</div>
+<table class="rpt-tbl">
+  <thead><tr>
+    <th>TIPO</th><th style="text-align:left">ESPECIES VALORADAS</th>
+    <th>KARDEX</th><th>ENTREGADO<br>HOY</th>
+    <th>FISICO<br>BOVEDA</th>
+    <th>PREPARADO<br>MANANA</th>
+    <th>STOCK<br>LIBRE</th>
+    <th>DIFERENCIA</th>
+  </tr></thead>
+  <tbody>${espRows}</tbody>
+  <tfoot>
+    <tr><td colspan="2" style="text-align:left">TOTALES</td>
+      <td>${ttKar}</td><td>${ttEnt}</td><td>${ttFis}</td><td>${ttMan}</td><td>${ttLib}</td>
+      <td class="${tdCls}">${tdTxt}</td>
+    </tr>
+  </tfoot>
+</table>
+
+<table class="rpt-obs-tbl">
+  <tr><td style="width:100px;font-weight:700">OBSERVACION:</td>
+    <td>${obs}</td>
+  </tr>
+</table>
+
+<div class="rpt-sigs">
+  <div class="rpt-sig">
+    <div class="rpt-sig-line"></div>
+    <div class="rpt-sig-name">${fiscalizador}</div>
+    <div class="rpt-sig-role">FISCALIZADOR(ES)</div>
+  </div>
+  <div class="rpt-sig">
+    <div class="rpt-sig-line"></div>
+    <div class="rpt-sig-name">${supervisor}</div>
+    <div class="rpt-sig-role">SUPERVISOR DE CAJA</div>
+  </div>
+</div>
+
+<div class="rpt-footer">
+  Generado por Sistema de Arqueo EPMPTP &nbsp;|&nbsp; ${now.toLocaleString('es-EC')}
+</div>
+
+</body></html>`;
+}
+
+function _abrirImpresion(html){
+  // Intentar con iframe (más confiable en desktop)
+  const iframe=document.createElement('iframe');
+  iframe.style.cssText='position:fixed;top:-9999px;left:-9999px;width:1px;height:1px;border:0;';
+  document.body.appendChild(iframe);
+  const doc=iframe.contentDocument||iframe.contentWindow.document;
+  doc.open(); doc.write(html); doc.close();
+  // Esperar que cargue
+  setTimeout(()=>{
+    try{
+      iframe.contentWindow.focus();
+      iframe.contentWindow.print();
+    }catch(e){
+      // Fallback: popup
+      const w=window.open('','_blank','width=900,height=700');
+      if(w){w.document.write(html);w.document.close();w.focus();w.print();}
+      else{toast('Active los popups en el navegador e intente de nuevo');}
+    }
+    setTimeout(()=>{ try{document.body.removeChild(iframe);}catch(e){} },3000);
+  },600);
+}
+
+function imprimirReporte(){
+  try{
+    const html=buildPrintHTML(curArq, curUser);
+    _abrirImpresion(html);
+  }catch(e){ toast('Error: '+e.message); console.error(e); }
+}
+
+/* ═══ IMPRIMIR DESDE HISTORIAL ═════════════════════════════ */
+function imprimirDesdeHistorial(id){
+  const a=arqueos.find(x=>x.id===id);
+  if(!a){toast('No se encontro el arqueo');return;}
+  try{
+    const html=buildPrintHTML(a, a.fiscalizador);
+    _abrirImpresion(html);
+  }catch(e){ toast('Error: '+e.message); console.error(e); }
+}
+
+/* ═══ INIT ══════════════════════════════════════════════════ */
+document.addEventListener('DOMContentLoaded',()=>{
+  renderFiscList();
+  showScr('s-login');
+
+  // Al tocar cualquier input numérico, selecciona todo el contenido
+  // para que al escribir reemplace directamente sin borrar manualmente
+  document.addEventListener('focusin',e=>{
+    const t=e.target;
+    if(t.type==='number'||t.classList.contains('ni')||t.classList.contains('pi')){
+      setTimeout(()=>t.select(),50);
+    }
+  });
+
+  // Anti-zoom
+  let lt=0;
+  document.addEventListener('touchend',e=>{
+    const n=Date.now();if(n-lt<350)e.preventDefault();lt=n;
+  },{passive:false});
+
+  // Registrar Service Worker para PWA
+  if('serviceWorker' in navigator){
+    navigator.serviceWorker.register('sw.js')
+      .then(()=>console.log('SW registrado'))
+      .catch(e=>console.log('SW error:',e));
+  }
+});
+</script>
+</body>
+</html>
