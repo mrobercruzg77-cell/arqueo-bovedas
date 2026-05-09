@@ -1,5 +1,6 @@
 /* Service Worker — Arqueo Bóveda EPMPTP */
-const CACHE_NAME = 'arqueo-boveda-v3';
+/* Versión: network-first para garantizar siempre la versión más reciente */
+const CACHE_NAME = 'arqueo-boveda-v4';
 const ARCHIVOS = [
   './arqueo-boveda.html',
   './manifest.json',
@@ -7,16 +8,18 @@ const ARCHIVOS = [
   './icon-512.png'
 ];
 
-/* Instalación: pre-cachear todos los archivos */
+/* Instalación: borrar cachés viejos y pre-cachear */
 self.addEventListener('install', e => {
   e.waitUntil(
-    caches.open(CACHE_NAME)
+    caches.keys()
+      .then(keys => Promise.all(keys.map(k => caches.delete(k))))
+      .then(() => caches.open(CACHE_NAME))
       .then(cache => cache.addAll(ARCHIVOS))
       .then(() => self.skipWaiting())
   );
 });
 
-/* Activación: limpiar cachés viejos */
+/* Activación: limpiar todo lo viejo */
 self.addEventListener('activate', e => {
   e.waitUntil(
     caches.keys().then(keys =>
@@ -27,18 +30,10 @@ self.addEventListener('activate', e => {
   );
 });
 
-/* Fetch: cache first, luego red, luego HTML principal */
+/* Fetch: RED PRIMERO para el HTML principal, caché para el resto */
 self.addEventListener('fetch', e => {
-  e.respondWith(
-    caches.match(e.request).then(cached => {
-      if (cached) return cached;
-      return fetch(e.request)
-        .then(resp => {
-          const clone = resp.clone();
-          caches.open(CACHE_NAME).then(c => c.put(e.request, clone));
-          return resp;
-        })
-        .catch(() => caches.match('./arqueo-boveda.html'));
-    })
-  );
-});
+  const url = new URL(e.request.url);
+  const isHTML = url.pathname.endsWith('.html') || url.pathname.endsWith('/');
+
+  if (isHTML) {
+    /* HTML: siempre pedir a la red, c
