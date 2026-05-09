@@ -1818,7 +1818,7 @@ function buildPrintHTML(arq, userFisc){
 </body></html>`;
 }
 
-/* ── Carga dinámica de scripts externos ── */
+/* ── Carga dinámica de scripts ── */
 function _loadScript(src){
   return new Promise((resolve,reject)=>{
     if(document.querySelector('script[src="'+src+'"]')){resolve();return;}
@@ -1828,49 +1828,139 @@ function _loadScript(src){
   });
 }
 
-/* ── Generación real de PDF en móvil con html2canvas + jsPDF ── */
+/* ── PDF móvil con html2canvas + jsPDF ── */
 async function _abrirImpresionMobile(html){
-  // Mostrar pantalla de carga
+  // Pantalla de carga
   const loading=document.createElement('div');
   loading.id='pdf-loading';
   loading.style.cssText='position:fixed;top:0;left:0;right:0;bottom:0;z-index:99999;background:#1a237e;display:flex;flex-direction:column;align-items:center;justify-content:center;';
   loading.innerHTML='<div style="color:#fff;font-family:Arial;font-size:20px;font-weight:700;margin-bottom:16px;">&#128196; Generando PDF...</div><div style="color:#c5cae9;font-family:Arial;font-size:14px;">Por favor espere unos segundos</div>';
   document.body.appendChild(loading);
-
   try{
-    // Cargar librerías
     await _loadScript('https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js');
     await _loadScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js');
-
-    // Extraer estilos y contenido del HTML generado
+    // Extraer estilos y cuerpo del HTML del reporte
     const sm=html.match(/<style[^>]*>([\s\S]*?)<\/style>/gi)||[];
     const bm=html.match(/<body[^>]*>([\s\S]*?)<\/body>/i);
     const bodyContent=bm?bm[1]:html;
-
-    // Crear contenedor VISIBLE para que Android lo renderice correctamente
+    // Contenedor visible para que Android renderice correctamente
     const wrap=document.createElement('div');
     wrap.id='pdf-render-wrap';
-    wrap.style.cssText='position:fixed;top:0;left:0;width:100vw;overflow:visible;background:#fff;z-index:99998;';
-    wrap.innerHTML=sm.join('')+'<div style="padding:12px;font-family:Arial;font-size:9pt;">'+bodyContent+'</div>';
+    wrap.style.cssText='position:fixed;top:0;left:0;width:100vw;z-index:99998;background:#fff;overflow:visible;';
+    wrap.innerHTML=sm.join('')+'<div style="padding:10px;font-family:Arial;font-size:9pt;">'+bodyContent+'</div>';
     document.body.appendChild(wrap);
-
-    // Esperar render completo
-    await new Promise(r=>setTimeout(r,600));
-
-    // Capturar el contenido visible
+    await new Promise(r=>setTimeout(r,700));
     const canvas=await html2canvas(wrap,{
-      scale:1.5,
-      useCORS:true,
-      allowTaint:true,
-      backgroundColor:'#ffffff',
-      scrollX:0, scrollY:0,
-      windowWidth:window.innerWidth,
-      logging:false
+      scale:1.5,useCORS:true,allowTaint:true,
+      backgroundColor:'#ffffff',scrollX:0,scrollY:0,
+      windowWidth:window.innerWidth,logging:false
     });
-
-    // Limpiar contenedor de render
-    document.body.removeChild(wrap);
-
+    document.getElementById('pdf-render-wrap')&&document.body.removeChild(wrap);
     // Generar PDF A4
     const {jsPDF}=window.jspdf;
-    const pdf=new jsPDF({orientation:'portrait',unit:'pt',format:'a4'
+    const pdf=new jsPDF({orientation:'portrait',unit:'pt',format:'a4'});
+    const pageW=pdf.internal.pageSize.getWidth();
+    const pageH=pdf.internal.pageSize.getHeight();
+    const imgData=canvas.toDataURL('image/jpeg',0.88);
+    const totalImgH=(canvas.height*pageW)/canvas.width;
+    let posY=0,pg=0;
+    while(posY<totalImgH){
+      if(pg>0)pdf.addPage();
+      pdf.addImage(imgData,'JPEG',0,-posY,pageW,totalImgH);
+      posY+=pageH; pg++;
+    }
+    const fecha=new Date().toISOString().slice(0,10);
+    const corredor=(curArq&&curArq.corredor)?curArq.corredor.replace(/\s+/g,'_'):'Arqueo';
+    const nombre='Arqueo_'+corredor+'_'+fecha+'.pdf';
+    const blob=pdf.output('blob');
+    document.getElementById('pdf-loading')&&document.getElementById('pdf-loading').remove();
+    const file=new File([blob],nombre,{type:'application/pdf'});
+    if(navigator.share&&navigator.canShare&&navigator.canShare({files:[file]})){
+      await navigator.share({title:'Reporte Arqueo Boveda EPMPTP',text:'Arqueo '+fecha,files:[file]});
+      toast('PDF listo para compartir!');
+    } else {
+      const url=URL.createObjectURL(blob);
+      const a=document.createElement('a');
+      a.href=url;a.download=nombre;
+      document.body.appendChild(a);a.click();document.body.removeChild(a);
+      setTimeout(()=>URL.revokeObjectURL(url),5000);
+      toast('PDF guardado: '+nombre);
+    }
+  }catch(err){
+    document.getElementById('pdf-loading')&&document.getElementById('pdf-loading').remove();
+    document.getElementById('pdf-render-wrap')&&document.getElementById('pdf-render-wrap').remove();
+    toast('Error PDF: '+err.message);
+    console.error(err);
+  }
+}
+
+function _abrirImpresion(html){
+  const isMobile=/Mobi|Android|iPhone|iPad/i.test(navigator.userAgent);
+  if(isMobile){
+    _abrirImpresionMobile(html);
+  } else {
+    // Desktop: iframe
+    const iframe=document.createElement('iframe');
+    iframe.style.cssText='position:fixed;top:-9999px;left:-9999px;width:1px;height:1px;border:0;';
+    document.body.appendChild(iframe);
+    const doc=iframe.contentDocument||iframe.contentWindow.document;
+    doc.open();doc.write(html);doc.close();
+    setTimeout(()=>{
+      try{iframe.contentWindow.focus();iframe.contentWindow.print();}
+      catch(e){
+        const w=window.open('','_blank','width=900,height=700');
+        if(w){w.document.write(html);w.document.close();w.focus();w.print();}
+        else{toast('Active los popups en el navegador e intente de nuevo');}
+      }
+      setTimeout(()=>{try{document.body.removeChild(iframe);}catch(e){}},3000);
+    },600);
+  }
+}
+
+function imprimirReporte(){
+  try{
+    const html=buildPrintHTML(curArq, curUser);
+    _abrirImpresion(html);
+  }catch(e){ toast('Error: '+e.message); console.error(e); }
+}
+
+/* ═══ IMPRIMIR DESDE HISTORIAL ═════════════════════════════ */
+function imprimirDesdeHistorial(id){
+  const a=arqueos.find(x=>x.id===id);
+  if(!a){toast('No se encontro el arqueo');return;}
+  try{
+    const html=buildPrintHTML(a, a.fiscalizador);
+    _abrirImpresion(html);
+  }catch(e){ toast('Error: '+e.message); console.error(e); }
+}
+
+/* ═══ INIT ══════════════════════════════════════════════════ */
+document.addEventListener('DOMContentLoaded',()=>{
+  renderFiscList();
+  showScr('s-login');
+
+  // Al tocar cualquier input numérico, selecciona todo el contenido
+  // para que al escribir reemplace directamente sin borrar manualmente
+  document.addEventListener('focusin',e=>{
+    const t=e.target;
+    if(t.type==='number'||t.classList.contains('ni')||t.classList.contains('pi')){
+      setTimeout(()=>t.select(),50);
+    }
+  });
+
+  // Anti-zoom
+  let lt=0;
+  document.addEventListener('touchend',e=>{
+    const n=Date.now();if(n-lt<350)e.preventDefault();lt=n;
+  },{passive:false});
+
+  // Registrar Service Worker para PWA
+  if('serviceWorker' in navigator){
+    navigator.serviceWorker.register('sw.js')
+      .then(()=>console.log('SW registrado'))
+      .catch(e=>console.log('SW error:',e));
+  }
+});
+</script>
+</body>
+</html>
