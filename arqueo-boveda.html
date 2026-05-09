@@ -1722,6 +1722,13 @@ function buildPrintHTML(arq, userFisc){
 <title>Arqueo Boveda EPMPTP</title>
 <style>${PRINT_CSS}</style>
 </head><body>
+<div id="mb-bar" style="position:sticky;top:0;z-index:999;background:#1a237e;padding:10px 14px;display:flex;justify-content:space-between;align-items:center;gap:8px;">
+  <span style="color:#fff;font-family:Arial;font-size:13px;font-weight:700;">&#128196; Reporte Arqueo</span>
+  <div style="display:flex;gap:8px;">
+    <button onclick="document.getElementById('mb-bar').style.display='none';window.print();setTimeout(()=>{document.getElementById('mb-bar').style.display='flex';},3000);" style="background:#ff8f00;border:none;color:#fff;padding:9px 16px;border-radius:6px;font-weight:700;font-size:14px;cursor:pointer;">&#128424; Guardar PDF / Compartir</button>
+  </div>
+</div>
+<style>@media print{#mb-bar{display:none!important}}</style>
 
 <div class="rpt-top">
   <div class="rpt-logo">EPMPTP</div>
@@ -1828,251 +1835,41 @@ function _loadScript(src){
   });
 }
 
-/* ── Generador PDF directo con jsPDF (sin html2canvas) ── */
-async function _abrirImpresionMobile(htmlIgnored){
-  const loading=document.createElement('div');
-  loading.id='pdf-loading';
-  loading.style.cssText='position:fixed;top:0;left:0;right:0;bottom:0;z-index:99999;background:#1a237e;display:flex;flex-direction:column;align-items:center;justify-content:center;';
-  loading.innerHTML='<div style="color:#fff;font-family:Arial;font-size:20px;font-weight:700;margin-bottom:16px;">&#128196; Generando PDF...</div><div style="color:#c5cae9;font-family:Arial;font-size:14px;">Por favor espere unos segundos</div>';
-  document.body.appendChild(loading);
+/* ── PDF móvil: abrir HTML en nueva pestaña con botón de impresión ── */
+function _abrirImpresionMobile(html){
   try{
-    await _loadScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js');
-    const {jsPDF}=window.jspdf;
-    const pdf=new jsPDF({orientation:'portrait',unit:'mm',format:'a4'});
-    const arq=curArq;
-    const pW=210, mg=8;
-    let y=mg;
-
-    /* colores */
-    const C={
-      db:[26,35,126], bk:[0,0,0], wh:[255,255,255],
-      lb:[232,234,246], gn:[46,125,50], rd:[198,40,40],
-      or:[230,81,0], gnbg:[232,245,233], rdbg:[255,235,238],
-      orbg:[255,243,224], gr:[150,150,150], lgr:[240,240,240]
-    };
-
-    const setF=(sz,bold,col)=>{
-      pdf.setFontSize(sz);
-      pdf.setFont('helvetica',bold?'bold':'normal');
-      pdf.setTextColor(...(col||C.bk));
-    };
-    const fill=(x,ry,w,h,col)=>{
-      pdf.setFillColor(...col);
-      pdf.rect(x,ry,w,h,'F');
-    };
-    const box=(x,ry,w,h,col)=>{
-      pdf.setDrawColor(...(col||C.bk));
-      pdf.setLineWidth(0.2);
-      pdf.rect(x,ry,w,h,'S');
-    };
-    const txt=(s,x,ry,sz,bold,col,al)=>{
-      setF(sz||8,bold,col);
-      pdf.text(String(s||''),x,ry,{align:al||'left',baseline:'middle'});
-    };
-    const chk=(need)=>{ if(y+need>286){pdf.addPage();y=mg;} };
-
-    /* ─── ENCABEZADO ─── */
-    box(mg,y,pW-2*mg,24);
-    /* logo */
-    fill(mg,y,24,24,C.wh); box(mg,y,24,24);
-    setF(7.5,true,C.db);
-    pdf.text('EPMPTP',mg+12,y+9,{align:'center'});
-    pdf.text('QUITO',mg+12,y+14,{align:'center'});
-    /* institución */
-    const cx=mg+24+(pW-2*mg-24)/2;
-    txt('EMPRESA PUBLICA METROPOLITANA DE TRANSPORTE DE PASAJEROS DE QUITO',cx,y+6,7.5,true,C.bk,'center');
-    txt('COORDINACION DE FISCALIZACION OPERATIVA',cx,y+11,6.5,false,C.bk,'center');
-    pdf.setLineWidth(0.3); pdf.setDrawColor(...C.bk);
-    pdf.line(mg+25,y+13,pW-mg,y+13);
-    txt('ARQUEO DE VALORES EN BOVEDA',cx,y+19,9,true,C.bk,'center');
-    y+=26;
-
-    /* ─── DATOS META ─── */
-    const cor=arq.corredor||'';
-    const ci=COR_INFO[cor]||{nom:cor||'—'};
-    const fld=(lbl,val,x,ry,lw,vw)=>{
-      fill(x,ry,lw,5.5,C.lb); box(x,ry,lw,5.5);
-      txt(lbl,x+1,ry+2.8,6.5,true);
-      fill(x+lw,ry,vw,5.5,C.wh); box(x+lw,ry,vw,5.5);
-      txt(val,x+lw+1,ry+2.8,6.5,false);
-    };
-    const rw=pW-2*mg;
-    fld('CORREDOR:',ci.nom,mg,y,36,rw-36); y+=5.5;
-    /* fila fecha/horas/turno */
-    const fw4=rw/4;
-    ['FECHA:','HORA INICIO:','HORA FINAL:','TURNO:'].forEach((l,i)=>{
-      const vals=[arq.fecha||'—',arq.horaInicio||'—',arq.horaFin||'—',arq.turno||'—'];
-      fill(mg+i*fw4,y,fw4,5.5,C.lb); box(mg+i*fw4,y,fw4,5.5);
-      txt(l+' '+vals[i],mg+i*fw4+1,y+2.8,6,false);
-    });
-    y+=5.5;
-    fld('FONDO FIJO CERTIFICADO:',f$(arq.fondoFijo||0)+'   FISCALIZADOR(ES): '+(arq.fiscalizador||'—'),mg,y,46,rw-46); y+=5.5;
-    fld('SUPERVISOR DE CAJA:',(arq.supervisor||'—'),mg,y,36,rw-36); y+=7;
-
-    /* ─── ESTADO ─── */
-    const st=arq.status||'wa';
-    const stC={ok:C.gnbg,wa:C.orbg,er:C.rdbg};
-    const stB={ok:C.gn,wa:C.or,er:C.rd};
-    const stT={ok:'ARQUEO CORRECTO — BOVEDA CUADRADA',wa:'REVISAR — SE DETECTARON DIFERENCIAS',er:'ERROR — DIFERENCIAS SIGNIFICATIVAS'};
-    fill(mg,y,rw,8,stC[st]);
-    pdf.setDrawColor(...stB[st]); pdf.setLineWidth(0.5); box(mg,y,rw,8,stB[st]);
-    txt(stT[st],pW/2,y+4,9,true,stB[st],'center');
-    pdf.setLineWidth(0.2); y+=10;
-
-    /* ─── TABLA HELPER ─── */
-    const tblHdr=(title,cols)=>{
-      chk(30);
-      fill(mg,y,rw,5.5,C.db); box(mg,y,rw,5.5,C.db);
-      txt(title,mg+2,y+2.8,8,true,C.wh); y+=6;
-      cols.forEach(c=>{
-        fill(c.x,y,c.w,7.5,C.db); box(c.x,y,c.w,7.5,C.db);
-        const lines=c.h.split('\n');
-        if(lines.length>1){
-          txt(lines[0],c.x+c.w/2,y+2.5,5.5,true,C.wh,'center');
-          txt(lines[1],c.x+c.w/2,y+5.5,5.5,true,C.wh,'center');
-        } else {
-          txt(c.h,c.x+c.w/2,y+4,5.5,true,C.wh,'center');
-        }
-      });
-      y+=8;
-    };
-    const tblRow=(cols,vals,bg)=>{
-      chk(5.5);
-      cols.forEach((c,i)=>{
-        fill(c.x,y,c.w,5.2,bg||C.wh); box(c.x,y,c.w,5.2);
-        const al=(i===1)?'left':'center';
-        const xp=(i===1)?c.x+1:c.x+c.w/2;
-        setF(6.5,false,C.bk);
-        pdf.text(String(vals[i]||''),xp,y+2.7,{align:al,baseline:'middle'});
-      });
-      y+=5.2;
-    };
-    const tblFoot=(cols,vals,boldCols)=>{
-      chk(5.5);
-      cols.forEach((c,i)=>{
-        fill(c.x,y,c.w,5.2,C.lb); box(c.x,y,c.w,5.2);
-        const al=(i===1)?'left':'center';
-        const xp=(i===1)?c.x+1:c.x+c.w/2;
-        setF(7,boldCols&&boldCols.includes(i),C.bk);
-        pdf.text(String(vals[i]||''),xp,y+2.7,{align:al,baseline:'middle'});
-      });
-      y+=5.2;
-    };
-
-    /* ─── SECCIÓN 1: FONDO FIJO ─── */
-    const fc=[
-      {x:mg,    w:14, h:'TIPO'},
-      {x:mg+14, w:46, h:'DENOMINACION'},
-      {x:mg+60, w:37, h:'ENTREGADO\nPLANILLAS'},
-      {x:mg+97, w:37, h:'SALDO EN CAJA\n(ABASTEC.)'},
-      {x:mg+134,w:37, h:'FISICO EN\nBOVEDA'},
-      {x:mg+171,w:pW-2*mg-171, h:'TOTAL\nKARDEX'},
-    ];
-    tblHdr('1. ARQUEO FONDO FIJO (DINERO)',fc);
-
-    let tEnt=0,tSal=0,tFis=0;
-    DENOMS.forEach(d=>{
-      const ent=((arq.ctFondo||{})[d.id]?.ent)||0;
-      const sal=((arq.ctFondo||{})[d.id]?.saldo)||0;
-      const fis=(arq.ctDin||{})[d.id]||0;
-      const kar=ent+sal; tEnt+=ent; tSal+=sal; tFis+=fis;
-      const diff=sal-fis;
-      const bg=Math.abs(diff)<0.02?C.wh:C.rdbg;
-      tblRow(fc,[d.tipo==='M'?'Moneda':'Billete',d.lbl,f$(ent),f$(sal),f$(fis),f$(kar)],bg);
-    });
-    const tKar=tEnt+tSal, tDiff=tSal-tFis;
-    tblFoot(fc,['TOTALES','',f$(tEnt),f$(tSal),f$(tFis),f$(tKar)],[0]);
-    chk(5.5);
-    fill(mg,y,rw,5.2,C.lb); box(mg,y,rw,5.2);
-    txt('DIFERENCIA FONDO:',mg+rw-40,y+2.7,7,true,C.bk,'right');
-    const dC=Math.abs(tDiff)<0.02?C.gn:C.rd;
-    const dT=Math.abs(tDiff)<0.02?'CUADRA':f$(Math.abs(tDiff));
-    txt(dT,mg+rw-1,y+2.7,7,true,dC,'right'); y+=7;
-
-    /* ─── SECCIÓN 2: ESPECIES ─── */
-    const ec=[
-      {x:mg,    w:10, h:'TIPO'},
-      {x:mg+10, w:52, h:'ESPECIES VALORADAS'},
-      {x:mg+62, w:22, h:'KAR-\nDEX'},
-      {x:mg+84, w:22, h:'ENTR.\nHOY'},
-      {x:mg+106,w:22, h:'FISICO\nBOV.'},
-      {x:mg+128,w:22, h:'PREP.\nMAN.'},
-      {x:mg+150,w:22, h:'STOCK\nLIBRE'},
-      {x:mg+172,w:pW-2*mg-172, h:'DIF.'},
-    ];
-    tblHdr('2. ARQUEO ESPECIES VALORADAS',ec);
-
-    let ttK=0,ttE=0,ttF=0,ttM=0,ttL=0;
-    const tipos=ESP_TYPES[cor]||[];
-    tipos.forEach(t=>{
-      const ent=((arq.ctEsp||{})[t.id]?.ent)||0;
-      const bov=((arq.ctEsp||{})[t.id]?.bov)||0;
-      const kar=ent+bov;
-      let sm=0; Object.values(arq.planMañana||{}).forEach(p=>{sm+=p[t.id]||0;});
-      const lib=t.grupo==='fix'?bov:bov-sm;
-      const fis=(arq.ctBol||{})[t.id]||0;
-      const diff=lib-fis;
-      ttK+=kar; ttE+=ent; ttF+=fis; ttM+=sm; ttL+=lib;
-      const bg=Math.abs(diff)<1?C.wh:(Math.abs(diff)<5?C.orbg:C.rdbg);
-      const dCol=Math.abs(diff)<1?C.gn:(Math.abs(diff)<5?C.or:C.rd);
-      const dTxt=Math.abs(diff)<1?'OK':(diff>0?'-'+diff:'+'+Math.abs(diff));
-      chk(5.5);
-      ec.forEach((c,i)=>{
-        fill(c.x,y,c.w,5.2,bg); box(c.x,y,c.w,5.2);
-        const al=(i===1)?'left':'center';
-        const xp=(i===1)?c.x+1:c.x+c.w/2;
-        const vals=[t.badge.toUpperCase(),t.lbl,kar,ent,fis,t.grupo==='fix'?'—':sm,lib,dTxt];
-        const colr=(i===7)?dCol:C.bk;
-        setF(i===1?6:6.5,i===7,colr);
-        pdf.text(String(vals[i]||''),xp,y+2.7,{align:al,baseline:'middle'});
-      });
-      y+=5.2;
-    });
-    const ttDiff=ttL-ttF;
-    tblFoot(ec,['TOTALES','',ttK,ttE,ttF,ttM,ttL,Math.abs(ttDiff)<1?'OK':(ttDiff>0?'-'+ttDiff:'+'+Math.abs(ttDiff))],[0]);
-    y+=4;
-
-    /* ─── OBSERVACIONES ─── */
-    chk(10);
-    box(mg,y,rw,8); txt('OBSERVACION:',mg+1,y+4,7,true); txt(arq.obs||'Sin observaciones',mg+37,y+4,7,false); y+=10;
-
-    /* ─── FIRMAS ─── */
-    chk(22); y+=8;
-    const sw=(rw-10)/2;
-    pdf.setDrawColor(...C.bk); pdf.setLineWidth(0.4);
-    pdf.line(mg,y,mg+sw,y);
-    txt(arq.fiscalizador||'—',mg+sw/2,y+4,8,true,C.bk,'center');
-    txt('FISCALIZADOR(ES)',mg+sw/2,y+9,7,false,C.gr,'center');
-    pdf.line(mg+sw+10,y,mg+2*sw+10,y);
-    txt(arq.supervisor||'—',mg+sw+10+sw/2,y+4,8,true,C.bk,'center');
-    txt('SUPERVISOR DE CAJA',mg+sw+10+sw/2,y+9,7,false,C.gr,'center');
-    y+=14;
-
-    /* ─── FOOTER ─── */
-    pdf.setDrawColor(...C.gr); pdf.setLineWidth(0.2);
-    pdf.line(mg,y,pW-mg,y); y+=4;
-    txt('Generado por Sistema de Arqueo EPMPTP  |  '+new Date().toLocaleString('es-EC'),pW/2,y,5.5,false,C.gr,'center');
-
-    /* ─── GUARDAR / COMPARTIR ─── */
-    const fecha2=new Date().toISOString().slice(0,10);
-    const nombre='Arqueo_'+cor.replace(/\s+/g,'_')+'_'+fecha2+'.pdf';
-    const blob=pdf.output('blob');
-    document.getElementById('pdf-loading')?.remove();
-    const file=new File([blob],nombre,{type:'application/pdf'});
-    if(navigator.share&&navigator.canShare&&navigator.canShare({files:[file]})){
-      await navigator.share({title:'Reporte Arqueo Boveda EPMPTP',text:'Arqueo '+fecha2,files:[file]});
-      toast('PDF listo para compartir!');
-    } else {
-      const url=URL.createObjectURL(blob);
-      const a=document.createElement('a');
-      a.href=url; a.download=nombre;
-      document.body.appendChild(a); a.click(); document.body.removeChild(a);
-      setTimeout(()=>URL.revokeObjectURL(url),5000);
-      toast('PDF guardado: '+nombre);
-    }
+    const blob=new Blob([html],{type:'text/html;charset=utf-8'});
+    const url=URL.createObjectURL(blob);
+    // Modal con botón para abrir (evita bloqueo de popups)
+    const old=document.getElementById('rpt-modal');
+    if(old)old.remove();
+    const modal=document.createElement('div');
+    modal.id='rpt-modal';
+    modal.style.cssText='position:fixed;top:0;left:0;right:0;bottom:0;z-index:99999;background:rgba(26,35,126,0.96);display:flex;align-items:center;justify-content:center;padding:20px;';
+    modal.innerHTML=
+      '<div style="background:#fff;border-radius:16px;padding:28px 22px;max-width:340px;width:100%;text-align:center;">'+
+        '<div style="font-size:50px;margin-bottom:10px;">&#128196;</div>'+
+        '<h2 style="font-family:Arial;color:#1a237e;margin:0 0 8px;font-size:18px;">Reporte listo</h2>'+
+        '<p style="font-family:Arial;font-size:13px;color:#555;margin:0 0 20px;line-height:1.6;">'+
+          'Toca <b>Abrir Reporte</b>.<br>'+
+          'En la nueva pantalla usa el bot&#243;n naranja<br>'+
+          '<b>&#128424; Guardar PDF / Compartir</b><br>'+
+          'para enviarlo por WhatsApp o correo.'+
+        '</p>'+
+        '<a href="'+url+'" target="_blank" '+
+           'style="display:block;background:#1a237e;color:#fff;text-decoration:none;padding:15px;border-radius:10px;font-family:Arial;font-weight:700;font-size:16px;margin-bottom:12px;" '+
+           'onclick="setTimeout(()=>{document.getElementById('rpt-modal').remove();},500);">'+
+          '&#128196; Abrir Reporte Completo'+
+        '</a>'+
+        '<button onclick="document.getElementById('rpt-modal').remove();" '+
+                'style="background:#eee;border:none;color:#666;padding:12px;border-radius:8px;font-family:Arial;font-size:14px;width:100%;cursor:pointer;">'+
+          'Cancelar'+
+        '</button>'+
+      '</div>';
+    document.body.appendChild(modal);
+    setTimeout(()=>URL.revokeObjectURL(url),300000);
   }catch(err){
-    document.getElementById('pdf-loading')?.remove();
-    toast('Error PDF: '+err.message);
+    toast('Error: '+err.message);
     console.error(err);
   }
 }
@@ -2098,7 +1895,6 @@ function _abrirImpresion(html){
     },600);
   }
 }
-
 
 
 function imprimirReporte(){
