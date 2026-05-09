@@ -1830,57 +1830,47 @@ function _loadScript(src){
 
 /* ── Generación real de PDF en móvil con html2canvas + jsPDF ── */
 async function _abrirImpresionMobile(html){
-  toast('Generando PDF...');
+  // Mostrar pantalla de carga
+  const loading=document.createElement('div');
+  loading.id='pdf-loading';
+  loading.style.cssText='position:fixed;top:0;left:0;right:0;bottom:0;z-index:99999;background:#1a237e;display:flex;flex-direction:column;align-items:center;justify-content:center;';
+  loading.innerHTML='<div style="color:#fff;font-family:Arial;font-size:20px;font-weight:700;margin-bottom:16px;">&#128196; Generando PDF...</div><div style="color:#c5cae9;font-family:Arial;font-size:14px;">Por favor espere unos segundos</div>';
+  document.body.appendChild(loading);
+
   try{
-    // Cargar librerías desde CDN
+    // Cargar librerías
     await _loadScript('https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js');
     await _loadScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js');
 
-    // Crear contenedor oculto con el reporte completo
-    const wrap=document.createElement('div');
-    wrap.style.cssText='position:absolute;left:-9999px;top:0;width:800px;background:#fff;';
+    // Extraer estilos y contenido del HTML generado
     const sm=html.match(/<style[^>]*>([\s\S]*?)<\/style>/gi)||[];
     const bm=html.match(/<body[^>]*>([\s\S]*?)<\/body>/i);
-    wrap.innerHTML=sm.join('')+(bm?bm[1]:html);
+    const bodyContent=bm?bm[1]:html;
+
+    // Crear contenedor VISIBLE para que Android lo renderice correctamente
+    const wrap=document.createElement('div');
+    wrap.id='pdf-render-wrap';
+    wrap.style.cssText='position:fixed;top:0;left:0;width:100vw;overflow:visible;background:#fff;z-index:99998;';
+    wrap.innerHTML=sm.join('')+'<div style="padding:12px;font-family:Arial;font-size:9pt;">'+bodyContent+'</div>';
     document.body.appendChild(wrap);
 
-    // Esperar render
-    await new Promise(r=>setTimeout(r,400));
+    // Esperar render completo
+    await new Promise(r=>setTimeout(r,600));
 
-    // Capturar como imagen
+    // Capturar el contenido visible
     const canvas=await html2canvas(wrap,{
-      scale:2,
+      scale:1.5,
       useCORS:true,
       allowTaint:true,
       backgroundColor:'#ffffff',
-      width:800,
-      windowWidth:800,
+      scrollX:0, scrollY:0,
+      windowWidth:window.innerWidth,
       logging:false
     });
+
+    // Limpiar contenedor de render
     document.body.removeChild(wrap);
 
-    // Generar PDF con jsPDF
+    // Generar PDF A4
     const {jsPDF}=window.jspdf;
-    const pdf=new jsPDF({orientation:'portrait',unit:'pt',format:'a4'});
-    const pageW=pdf.internal.pageSize.getWidth();
-    const pageH=pdf.internal.pageSize.getHeight();
-    const imgData=canvas.toDataURL('image/jpeg',0.92);
-    const totalImgH=(canvas.height*pageW)/canvas.width;
-
-    // Manejar múltiples páginas
-    let posY=0; let pg=0;
-    while(posY<totalImgH){
-      if(pg>0) pdf.addPage();
-      pdf.addImage(imgData,'JPEG',0,-posY,pageW,totalImgH);
-      posY+=pageH; pg++;
-    }
-
-    // Nombre del archivo
-    const fecha=new Date().toISOString().slice(0,10);
-    const corredor=(curArq&&curArq.corredor)?curArq.corredor.replace(/\s+/g,'_'):'Arqueo';
-    const nombre='Arqueo_'+corredor+'_'+fecha+'.pdf';
-    const blob=pdf.output('blob');
-    const file=new File([blob],nombre,{type:'application/pdf'});
-
-    // Intentar compartir directo (WhatsApp, correo, etc.)
-    if(navigator.share && navi
+    const pdf=new jsPDF({orientation:'portrait',unit:'pt',format:'a4'

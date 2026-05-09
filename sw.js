@@ -1,5 +1,5 @@
 /* Service Worker — Arqueo Bóveda EPMPTP */
-const CACHE_NAME = 'arqueo-boveda-v1';
+const CACHE_NAME = 'arqueo-boveda-v3';
 const ARCHIVOS = [
   './arqueo-boveda.html',
   './manifest.json',
