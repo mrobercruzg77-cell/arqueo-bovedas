@@ -1819,71 +1819,42 @@ function buildPrintHTML(arq, userFisc){
 }
 
 function _abrirImpresion(html){
-  // Intentar con iframe (más confiable en desktop)
-  const iframe=document.createElement('iframe');
-  iframe.style.cssText='position:fixed;top:-9999px;left:-9999px;width:1px;height:1px;border:0;';
-  document.body.appendChild(iframe);
-  const doc=iframe.contentDocument||iframe.contentWindow.document;
-  doc.open(); doc.write(html); doc.close();
-  // Esperar que cargue
-  setTimeout(()=>{
-    try{
-      iframe.contentWindow.focus();
-      iframe.contentWindow.print();
-    }catch(e){
-      // Fallback: popup
-      const w=window.open('','_blank','width=900,height=700');
-      if(w){w.document.write(html);w.document.close();w.focus();w.print();}
-      else{toast('Active los popups en el navegador e intente de nuevo');}
-    }
-    setTimeout(()=>{ try{document.body.removeChild(iframe);}catch(e){} },3000);
-  },600);
-}
+  const isMobile=/Mobi|Android|iPhone|iPad/i.test(navigator.userAgent);
+  if(isMobile){
+    // En móvil: mostrar overlay fullscreen y usar window.print() del documento principal
+    // (iframe.contentWindow.print() no funciona en Android Chrome)
+    const existing=document.getElementById('print-overlay');
+    if(existing) existing.remove();
+    document.getElementById('mobile-print-css')?.remove();
 
-function imprimirReporte(){
-  try{
-    const html=buildPrintHTML(curArq, curUser);
-    _abrirImpresion(html);
-  }catch(e){ toast('Error: '+e.message); console.error(e); }
-}
+    // Extraer contenido del body del HTML generado
+    const bodyMatch=html.match(/<body[^>]*>([\s\S]*?)<\/body>/i);
+    const bodyContent=bodyMatch ? bodyMatch[1] : html;
 
-/* ═══ IMPRIMIR DESDE HISTORIAL ═════════════════════════════ */
-function imprimirDesdeHistorial(id){
-  const a=arqueos.find(x=>x.id===id);
-  if(!a){toast('No se encontro el arqueo');return;}
-  try{
-    const html=buildPrintHTML(a, a.fiscalizador);
-    _abrirImpresion(html);
-  }catch(e){ toast('Error: '+e.message); console.error(e); }
-}
+    // Extraer estilos del HTML generado para incluirlos en el overlay
+    const styleMatch=html.match(/<style[^>]*>([\s\S]*?)<\/style>/i);
+    const embeddedStyle=styleMatch ? styleMatch[1] : '';
 
-/* ═══ INIT ══════════════════════════════════════════════════ */
-document.addEventListener('DOMContentLoaded',()=>{
-  renderFiscList();
-  showScr('s-login');
+    const overlay=document.createElement('div');
+    overlay.id='print-overlay';
+    overlay.style.cssText='position:fixed;top:0;left:0;right:0;bottom:0;z-index:99999;background:#fff;overflow-y:auto;-webkit-overflow-scrolling:touch;';
+    overlay.innerHTML=
+      '<div id="print-toolbar" style="position:sticky;top:0;z-index:1;background:#1a237e;padding:10px 14px;display:flex;justify-content:space-between;align-items:center;gap:8px;">'+
+        '<span style="color:#fff;font-weight:700;font-family:Arial;font-size:13px;">&#128196; Reporte listo para guardar</span>'+
+        '<div style="display:flex;gap:8px;">'+
+          '<button onclick="window.print()" style="background:#ff8f00;border:none;color:#fff;padding:9px 16px;border-radius:6px;font-weight:700;font-size:13px;cursor:pointer;">&#128424; Guardar PDF</button>'+
+          '<button onclick="document.getElementById(\'print-overlay\').remove();document.getElementById(\'mobile-print-css\')&&document.getElementById(\'mobile-print-css\').remove();" style="background:#555;border:none;color:#fff;padding:9px 14px;border-radius:6px;font-size:16px;cursor:pointer;">&#x2715;</button>'+
+        '</div>'+
+      '</div>'+
+      '<style>'+embeddedStyle+'</style>'+
+      '<div style="padding:8px;">'+bodyContent+'</div>';
 
-  // Al tocar cualquier input numérico, selecciona todo el contenido
-  // para que al escribir reemplace directamente sin borrar manualmente
-  document.addEventListener('focusin',e=>{
-    const t=e.target;
-    if(t.type==='number'||t.classList.contains('ni')||t.classList.contains('pi')){
-      setTimeout(()=>t.select(),50);
-    }
-  });
+    document.body.appendChild(overlay);
 
-  // Anti-zoom
-  let lt=0;
-  document.addEventListener('touchend',e=>{
-    const n=Date.now();if(n-lt<350)e.preventDefault();lt=n;
-  },{passive:false});
-
-  // Registrar Service Worker para PWA
-  if('serviceWorker' in navigator){
-    navigator.serviceWorker.register('sw.js')
-      .then(()=>console.log('SW registrado'))
-      .catch(e=>console.log('SW error:',e));
-  }
-});
-</script>
-</body>
-</html>
+    // CSS: al imprimir, ocultar la app y mostrar solo el overlay
+    const pStyle=document.createElement('style');
+    pStyle.id='mobile-print-css';
+    pStyle.textContent=
+      '@media print{'+
+        '#app,#modal-ov,.toast,#print-toolbar{display:none!important}'+
+        '#print-overlay{position:static!impor
