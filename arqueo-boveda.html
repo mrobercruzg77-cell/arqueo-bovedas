@@ -1843,17 +1843,29 @@ async function _abrirImpresionMobile(html){
     const sm=html.match(/<style[^>]*>([\s\S]*?)<\/style>/gi)||[];
     const bm=html.match(/<body[^>]*>([\s\S]*?)<\/body>/i);
     const bodyContent=bm?bm[1]:html;
-    // Contenedor visible para que Android renderice correctamente
+    // Contenedor detrás del loading para captura completa
     const wrap=document.createElement('div');
     wrap.id='pdf-render-wrap';
-    wrap.style.cssText='position:fixed;top:0;left:0;width:100vw;z-index:99998;background:#fff;overflow:visible;';
+    // position:absolute para que tenga altura completa (no limitada al viewport)
+    // z-index menor que el loading (99999) para que quede oculto al usuario
+    wrap.style.cssText='position:absolute;top:0;left:0;width:'+window.innerWidth+'px;background:#fff;z-index:99990;overflow:visible;';
     wrap.innerHTML=sm.join('')+'<div style="padding:10px;font-family:Arial;font-size:9pt;">'+bodyContent+'</div>';
     document.body.appendChild(wrap);
-    await new Promise(r=>setTimeout(r,700));
+    // Esperar render completo
+    await new Promise(r=>setTimeout(r,900));
+    // Capturar documento COMPLETO con height=scrollHeight
+    const fullH=wrap.scrollHeight;
+    const fullW=wrap.offsetWidth||window.innerWidth;
     const canvas=await html2canvas(wrap,{
       scale:1.5,useCORS:true,allowTaint:true,
-      backgroundColor:'#ffffff',scrollX:0,scrollY:0,
-      windowWidth:window.innerWidth,logging:false
+      backgroundColor:'#ffffff',
+      scrollX:0,scrollY:0,
+      x:0,y:0,
+      width:fullW,
+      height:fullH,
+      windowWidth:fullW,
+      windowHeight:fullH,
+      logging:false
     });
     document.getElementById('pdf-render-wrap')&&document.body.removeChild(wrap);
     // Generar PDF A4
