@@ -1103,14 +1103,19 @@ function buildPlanillasTable(paso){
   paradas.normales.forEach((p,i)=>{
     const idx='n'+(i+1);
     const sv=curArq[dataKey][idx]||{};
-    const lockedCash=isMañana;
-    html+=`<tr><td class="sticky-col" title="${p}">${i+1}. ${p}</td>
+    const hasAbN=showCash&&(colsN.some(col=>(sv['a_'+col.id]||0)>0)||(sv.a_cash||0)>0);
+    html+=`<tr><td class="sticky-col" title="${p}">
+      <div style="font-size:12px;font-weight:600;line-height:1.3">${i+1}. ${p}</div>
+      ${showCash?`<button id="abast-btn-${paso}-${idx}" onclick="toggleAbast(${paso},'${idx}')" class="abast-toggle${hasAbN?' abast-on':''}">` +
+        `${hasAbN?'\u2715 Abastec.(+)':'\u2795 Abastec.(+)'}</button>`:''}
+    </td>
       ${colsN.map(c=>`<td><input type="number" class="pi" id="pi-${paso}-${idx}-${c.id}"
         value="${sv[c.id]||0}" min="0" oninput="calcPlanRow(${paso},'${idx}')"></td>`).join('')}
       ${showCash?`<td><input type="number" class="pi cash" id="pi-${paso}-${idx}-cash" value="${sv.cash||0}" min="0" step="0.01" oninput="calcPlanRow(${paso},'${idx}')"></td>`:''}
     </tr>`;
     if(showCash){
-      html+=`<tr style="background:#e8f5e9"><td class="sticky-col" style="font-size:10px;color:#2e7d32;padding-left:14px;white-space:nowrap">&#8627; Abastec.(+)</td>
+      html+=`<tr id="abast-row-${paso}-${idx}" style="background:#e8f5e9;display:${hasAbN?'table-row':'none'}">
+        <td class="sticky-col" style="font-size:10px;color:#2e7d32;padding-left:18px">↳ Abastec.(+)</td>
         ${colsN.map(c=>`<td><input type="number" class="pi" id="pa-${paso}-${idx}-${c.id}"
           value="${sv['a_'+c.id]||0}" min="0" oninput="calcPlanRow(${paso},'${idx}')" style="background:#f1f8e9"></td>`).join('')}
         <td><input type="number" class="pi cash" id="pa-${paso}-${idx}-cash" value="${sv.a_cash||0}" min="0" step="0.01" oninput="calcPlanRow(${paso},'${idx}')" style="background:#f1f8e9"></td>
@@ -1144,12 +1149,18 @@ function buildPlanillasTable(paso){
       const idx='a'+(i+1);
       const sv=curArq[dataKey][idx]||{};
       const lockedCash=isMañana;
-      html+=`<tr><td class="sticky-col" title="${p}">${i+1}. ${p}</td>
+      const hasAbA=showCash&&(colsA.some(col=>(sv['a_'+col.id]||0)>0));
+      html+=`<tr><td class="sticky-col" title="${p}">
+        <div style="font-size:12px;font-weight:600;line-height:1.3">${i+1}. ${p}</div>
+        ${showCash?`<button id="abast-btn-${paso}-${idx}" onclick="toggleAbast(${paso},'${idx}')" class="abast-toggle${hasAbA?' abast-on':''}">` +
+          `${hasAbA?'\u2715 Abastec.(+)':'\u2795 Abastec.(+)'}</button>`:''}
+      </td>
         ${colsA.map(c=>`<td><input type="number" class="pi" id="pi-${paso}-${idx}-${c.id}"
           value="${sv[c.id]||0}" min="0" oninput="calcPlanRow(${paso},'${idx}')"></td>`).join('')}
       </tr>`;
       if(showCash){
-        html+=`<tr style="background:#e8f5e9"><td class="sticky-col" style="font-size:10px;color:#2e7d32;padding-left:14px;white-space:nowrap">&#8627; Abastec.(+)</td>
+        html+=`<tr id="abast-row-${paso}-${idx}" style="background:#e8f5e9;display:${hasAbA?'table-row':'none'}">
+          <td class="sticky-col" style="font-size:10px;color:#2e7d32;padding-left:18px">↳ Abastec.(+)</td>
           ${colsA.map(c=>`<td><input type="number" class="pi" id="pa-${paso}-${idx}-${c.id}"
             value="${sv['a_'+c.id]||0}" min="0" oninput="calcPlanRow(${paso},'${idx}')" style="background:#f1f8e9"></td>`).join('')}
         </tr>`;
@@ -1169,6 +1180,26 @@ function buildPlanillasTable(paso){
 }
 
 function calcPlanRow(paso,idx){savePlan(paso);updatePlanTotals(paso);updatePlanVal(paso);}
+
+function toggleAbast(paso,idx){
+  const row=document.getElementById('abast-row-'+paso+'-'+idx);
+  const btn=document.getElementById('abast-btn-'+paso+'-'+idx);
+  if(!row||!btn) return;
+  const showing=row.style.display!=='none';
+  if(showing){
+    row.querySelectorAll('input').forEach(function(inp){inp.value=0;});
+    savePlan(paso);updatePlanTotals(paso);updatePlanVal(paso);
+    row.style.display='none';
+    btn.textContent='➕ Abastec.(+)';
+    btn.classList.remove('abast-on');
+  } else {
+    row.style.display='table-row';
+    btn.textContent='✕ Abastec.(+)';
+    btn.classList.add('abast-on');
+    var first=row.querySelector('input');
+    if(first) setTimeout(function(){first.focus();},80);
+  }
+}
 
 function savePlan(paso){
   const cor=curArq.corredor;
