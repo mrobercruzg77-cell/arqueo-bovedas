@@ -1098,6 +1098,13 @@ function buildPlanillasTable(paso){
         value="${sv[c.id]||0}" min="0" oninput="calcPlanRow(${paso},'${idx}')"></td>`).join('')}
       ${showCash?`<td><input type="number" class="pi cash" id="pi-${paso}-${idx}-cash" value="${sv.cash||0}" min="0" step="0.01" oninput="calcPlanRow(${paso},'${idx}')"></td>`:''}
     </tr>`;
+    if(showCash){
+      html+=`<tr style="background:#e8f5e9"><td class="sticky-col" style="font-size:10px;color:#2e7d32;padding-left:14px;white-space:nowrap">&#8627; Abastec.(+)</td>
+        ${colsN.map(c=>`<td><input type="number" class="pi" id="pa-${paso}-${idx}-${c.id}"
+          value="${sv['a_'+c.id]||0}" min="0" oninput="calcPlanRow(${paso},'${idx}')" style="background:#f1f8e9"></td>`).join('')}
+        <td><input type="number" class="pi cash" id="pa-${paso}-${idx}-cash" value="${sv.a_cash||0}" min="0" step="0.01" oninput="calcPlanRow(${paso},'${idx}')" style="background:#f1f8e9"></td>
+      </tr>`;
+    }
   });
   html+=`</tbody>
           <tfoot><tr class="tot-row">
@@ -1130,6 +1137,12 @@ function buildPlanillasTable(paso){
         ${colsA.map(c=>`<td><input type="number" class="pi" id="pi-${paso}-${idx}-${c.id}"
           value="${sv[c.id]||0}" min="0" oninput="calcPlanRow(${paso},'${idx}')"></td>`).join('')}
       </tr>`;
+      if(showCash){
+        html+=`<tr style="background:#e8f5e9"><td class="sticky-col" style="font-size:10px;color:#2e7d32;padding-left:14px;white-space:nowrap">&#8627; Abastec.(+)</td>
+          ${colsA.map(c=>`<td><input type="number" class="pi" id="pa-${paso}-${idx}-${c.id}"
+            value="${sv['a_'+c.id]||0}" min="0" oninput="calcPlanRow(${paso},'${idx}')" style="background:#f1f8e9"></td>`).join('')}
+        </tr>`;
+      }
     });
     html+=`</tbody>
             <tfoot><tr class="tot-row">
@@ -1158,6 +1171,11 @@ function savePlan(paso){
     const row={};
     cols.forEach(c=>{ row[c.id]=parseInt(document.getElementById(`pi-${paso}-${idx}-${c.id}`)?.value||0)||0; });
     row.cash=parseFloat(document.getElementById(`pi-${paso}-${idx}-cash`)?.value||0)||0;
+    // abastecimiento (solo en planillas de HOY)
+    if(paso===4){
+      cols.forEach(c=>{ row['a_'+c.id]=parseInt(document.getElementById(`pa-${paso}-${idx}-${c.id}`)?.value||0)||0; });
+      row.a_cash=parseFloat(document.getElementById(`pa-${paso}-${idx}-cash`)?.value||0)||0;
+    }
     curArq[dk][idx]=row;
   });
   // alim
@@ -1167,6 +1185,10 @@ function savePlan(paso){
     const row={};
     cols.forEach(c=>{ row[c.id]=parseInt(document.getElementById(`pi-${paso}-${idx}-${c.id}`)?.value||0)||0; });
     row.cash=parseFloat(document.getElementById(`pi-${paso}-${idx}-cash`)?.value||0)||0;
+    // abastecimiento (solo en planillas de HOY)
+    if(paso===4){
+      cols.forEach(c=>{ row['a_'+c.id]=parseInt(document.getElementById(`pa-${paso}-${idx}-${c.id}`)?.value||0)||0; });
+    }
     curArq[dk][idx]=row;
   });
 }
@@ -1231,6 +1253,22 @@ function calcSumCash(paso){
   let total=0;
   paradas.normales.forEach((p,i)=>{ total+=parseFloat(document.getElementById(`pi-${paso}-n${i+1}-cash`)?.value||0)||0; });
   (paradas.alim||[]).forEach((p,i)=>{ total+=parseFloat(document.getElementById(`pi-${paso}-a${i+1}-cash`)?.value||0)||0; });
+  return total;
+}
+
+// Suma el abastecimiento de boletos por especie desde planHoy guardado
+function calcSumPlanAbast(espId){
+  const plan=curArq.planHoy||{};
+  let total=0;
+  Object.values(plan).forEach(p=>{ total+=(p['a_'+espId]||0); });
+  return total;
+}
+
+// Suma el abastecimiento de dinero desde planHoy guardado
+function calcSumCashAbast(){
+  const plan=curArq.planHoy||{};
+  let total=0;
+  Object.values(plan).forEach(p=>{ total+=(p.a_cash||0); });
   return total;
 }
 
@@ -1674,48 +1712,49 @@ function buildPrintHTML(arq, userFisc){
     const ent=((arq.ctFondo||{})[d.id]?.ent)||0;
     const sal=((arq.ctFondo||{})[d.id]?.saldo)||0;
     const fis=(arq.ctDin||{})[d.id]||0;
-    const kar=ent+sal; tEnt+=ent; tSal+=sal; tFis+=fis;
-    const diff=sal-fis;
-    const rc=Math.abs(diff)<0.02?'':'diff-row';
-    fondoRows+=`<tr class="${rc}">
-      <td>${d.tipo==='M'?'Moneda':'Billete'}</td>
+    const tot=ent+sal+fis; tEnt+=ent; tSal+=sal; tFis+=fis;
+    fondoRows+=`<tr>
       <td style="text-align:left">${d.lbl}</td>
-      <td>${f$(ent)}</td><td>${f$(sal)}</td><td>${f$(fis)}</td><td>${f$(kar)}</td>
+      <td>${f$(ent)}</td><td>${f$(sal)}</td><td>${f$(fis)}</td><td>${f$(tot)}</td>
     </tr>`;
   });
-  const tKar=tEnt+tSal; const tDiffF=tSal-tFis;
+  const tTot=tEnt+tSal+tFis;
+  const fondoFijoNum=parseFloat(arq.fondoFijo)||0;
+  const tDiffF=fondoFijoNum-tFis;
   const dCls=Math.abs(tDiffF)<0.02?'ok':'er';
-  const dTxt=Math.abs(tDiffF)<0.02?'CUADRA':f$(Math.abs(tDiffF));
+  const dTxt=Math.abs(tDiffF)<0.02?'CUADRA':f$(tDiffF);
 
   /* ── SECCIÓN 2: ESPECIES VALORADAS ── */
-  let espRows=''; let ttKar=0,ttEnt=0,ttFis=0,ttMan=0,ttLib=0;
+  let espRows=''; let ttKar=0,ttEnt=0,ttFis=0,ttAbast=0,ttTot=0;
   const tipos=ESP_TYPES[cor]||[];
   tipos.forEach(t=>{
     const ent=((arq.ctEsp||{})[t.id]?.ent)||0;
     const bov=((arq.ctEsp||{})[t.id]?.bov)||0;
     const kar=ent+bov;
-    // calcular sumMan desde los datos guardados
-    let sumMan=0;
-    const plan=arq.planMañana||{};
-    Object.values(plan).forEach(p=>{ sumMan+=p[t.id]||0; });
-    const lib=t.grupo==='fix'?bov:bov-sumMan;
+    // entregado según planillas hoy
+    let sumHoy=0;
+    const planH=arq.planHoy||{};
+    Object.values(planH).forEach(p=>{ sumHoy+=p[t.id]||0; });
+    // abastecimiento desde planillas hoy
+    let sumAbast=0;
+    Object.values(planH).forEach(p=>{ sumAbast+=(p['a_'+t.id]||0); });
     const fis=(arq.ctBol||{})[t.id]||0;
-    const diff=lib-fis;
-    ttKar+=kar; ttEnt+=ent; ttFis+=fis; ttMan+=sumMan; ttLib+=lib;
+    const tot=sumHoy+fis+sumAbast;
+    const diff=kar-tot;
+    ttKar+=kar; ttEnt+=sumHoy; ttFis+=fis; ttAbast+=sumAbast; ttTot+=tot;
     const rc=Math.abs(diff)<1?'':(Math.abs(diff)<5?'wa-row':'diff-row');
     const dc=Math.abs(diff)<1?'ok':(Math.abs(diff)<5?'wa':'er');
-    const dt=Math.abs(diff)<1?'OK':(diff>0?'-'+diff:'+'+Math.abs(diff));
+    const dt=Math.abs(diff)<1?'OK':(diff>0?'+'+diff:String(diff));
     espRows+=`<tr class="${rc}">
-      <td style="font-size:7pt;font-weight:700">${t.badge.toUpperCase()}</td>
       <td style="text-align:left">${t.lbl}</td>
-      <td>${kar}</td><td>${ent}</td><td>${fis}</td>
-      <td>${t.grupo==='fix'?'—':sumMan}</td><td>${lib}</td>
+      <td>${kar}</td><td>${sumHoy}</td><td>${fis}</td>
+      <td>${sumAbast}</td><td>${tot}</td>
       <td class="${dc}">${dt}</td>
     </tr>`;
   });
-  const ttDiff=ttLib-ttFis;
+  const ttDiff=ttKar-ttTot;
   const tdCls=Math.abs(ttDiff)<1?'ok':'er';
-  const tdTxt=Math.abs(ttDiff)<1?'OK':(ttDiff>0?'-'+ttDiff:'+'+Math.abs(ttDiff));
+  const tdTxt=Math.abs(ttDiff)<1?'OK':(ttDiff>0?'+'+ttDiff:String(ttDiff));
 
   return `<!DOCTYPE html><html lang="es"><head>
 <meta charset="UTF-8">
@@ -1763,19 +1802,25 @@ function buildPrintHTML(arq, userFisc){
 <div class="rpt-sec">1. ARQUEO FONDO FIJO (DINERO)</div>
 <table class="rpt-tbl">
   <thead><tr>
-    <th>TIPO</th><th style="text-align:left">DENOMINACION</th>
-    <th>ENTREGADO SEGUN PLANILLAS<br>(DESPACHADO)</th>
-    <th>SALDO EN CAJA<br>(ABASTECIMIENTO)</th>
-    <th>FISICO EN BOVEDA<br>(CONTADO)</th>
-    <th>TOTAL<br>(KARDEX)</th>
+    <th style="text-align:left">DENOMINACION</th>
+    <th>VALOR EFECTIVO<br>ENTREGADO<br>(PLANILLAS)</th>
+    <th>ABASTECIMIENTO<br>(+)</th>
+    <th>VALOR EFECTIVO<br>EN BOVEDA<br>(FISICO)</th>
+    <th>TOTAL</th>
   </tr></thead>
   <tbody>${fondoRows}</tbody>
   <tfoot>
-    <tr><td colspan="2" style="text-align:left">TOTALES</td>
-      <td>${f$(tEnt)}</td><td>${f$(tSal)}</td><td>${f$(tFis)}</td><td>${f$(tKar)}</td>
+    <tr><td style="text-align:left;font-weight:700">TOTALES</td>
+      <td>${f$(tEnt)}</td><td>${f$(tSal)}</td><td>${f$(tFis)}</td><td>${f$(tTot)}</td>
     </tr>
-    <tr><td colspan="5" style="text-align:right;font-weight:700">DIFERENCIA FONDO:</td>
-      <td class="${dCls}">${dTxt}</td>
+    <tr><td style="text-align:left">VALOR FONDO FIJO ASIGNADO SEG. ACTA</td>
+      <td colspan="3"></td><td>${fondoFijo}</td>
+    </tr>
+    <tr><td style="text-align:left">VALOR SEGUN VERIFICACION FISICA</td>
+      <td colspan="3"></td><td>${f$(tFis)}</td>
+    </tr>
+    <tr><td style="text-align:left;font-weight:700">DIFERENCIA</td>
+      <td colspan="3"></td><td class="${dCls}">${dTxt}</td>
     </tr>
   </tfoot>
 </table>
@@ -1783,17 +1828,18 @@ function buildPrintHTML(arq, userFisc){
 <div class="rpt-sec">2. ARQUEO ESPECIES VALORADAS</div>
 <table class="rpt-tbl">
   <thead><tr>
-    <th>TIPO</th><th style="text-align:left">ESPECIES VALORADAS</th>
-    <th>KARDEX</th><th>ENTREGADO<br>HOY</th>
-    <th>FISICO<br>BOVEDA</th>
-    <th>PREPARADO<br>MANANA</th>
-    <th>STOCK<br>LIBRE</th>
+    <th style="text-align:left">ESPECIES VALORADAS</th>
+    <th>KARDEX</th>
+    <th>ENTREGADO<br>SEG. PLANILLAS</th>
+    <th>FISICO EN<br>BODEGA BOVEDA</th>
+    <th>ABASTECIMIENTO(+)<br>TRANSFERENCIA</th>
+    <th>TOTAL</th>
     <th>DIFERENCIA</th>
   </tr></thead>
   <tbody>${espRows}</tbody>
   <tfoot>
-    <tr><td colspan="2" style="text-align:left">TOTALES</td>
-      <td>${ttKar}</td><td>${ttEnt}</td><td>${ttFis}</td><td>${ttMan}</td><td>${ttLib}</td>
+    <tr><td style="text-align:left;font-weight:700">TOTALES</td>
+      <td>${ttKar}</td><td>${ttEnt}</td><td>${ttFis}</td><td>${ttAbast}</td><td>${ttTot}</td>
       <td class="${tdCls}">${tdTxt}</td>
     </tr>
   </tfoot>
