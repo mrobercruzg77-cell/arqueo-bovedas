@@ -468,6 +468,11 @@ body.modo-impresion #rpt{
     <div><h1 id="arq-title">Nuevo Arqueo</h1><small id="arq-sub">Paso 1 de 8</small></div>
   </div>
   <div class="prog" id="arq-prog"></div>
+  <!-- Banner Modo Edición -->
+  <div id="edit-banner" style="display:none;background:#E65100;color:#fff;text-align:center;
+    padding:8px 14px;font-size:13px;font-weight:700;letter-spacing:.5px;">
+    ✏️ MODO EDICIÓN — Modificando arqueo guardado
+  </div>
 
   <!-- P1: Info General -->
   <div class="body nb" id="p1">
@@ -944,7 +949,11 @@ function iniciarArqueo(){
   document.getElementById('p1-hora').value=padTime(n);
   showScr('s-arq');goP(1);
 }
-function backArqueo(){goHome();}
+function backArqueo(){
+  document.getElementById('edit-banner').style.display='none';
+  curArq._editingId=null;
+  goHome();
+}
 function resetPasos(){
   for(let i=1;i<=8;i++) document.getElementById('p'+i).style.display='none';
 }
@@ -1512,13 +1521,29 @@ function buildInforme(){
 function guardarArqueo(){
   const horaFin=document.getElementById('p8-hora-fin').value;
   const obs=document.getElementById('p8-obs').value;
+
+  if(curArq._editingId){
+    // ── Actualizar arqueo existente ──
+    const idx=arqueos.findIndex(x=>x.id===curArq._editingId);
+    if(idx>=0){
+      const orig=arqueos[idx];
+      const updated={...curArq, id:orig.id, ts:orig.ts,
+        _editedTs:new Date().toISOString(), _editedBy:curUser,
+        fiscalizador:curArq.fiscalizador||curUser, horaFin, obs};
+      delete updated._editingId;
+      arqueos[idx]=updated;
+      SLS('arqueos',arqueos);
+      document.getElementById('edit-banner').style.display='none';
+      toast('✅ Arqueo actualizado correctamente');
+      setTimeout(()=>goHome(),900);
+      return;
+    }
+  }
+
+  // ── Nuevo arqueo ──
   const id='ARQ-'+Date.now();
-  const a={
-    ...curArq, id,
-    fiscalizador:curUser,
-    horaFin, obs,
-    ts:new Date().toISOString()
-  };
+  const a={...curArq, id, fiscalizador:curUser, horaFin, obs, ts:new Date().toISOString()};
+  delete a._editingId;
   arqueos.push(a);
   SLS('arqueos',arqueos);
   toast('✅ Arqueo guardado correctamente');
@@ -1612,14 +1637,125 @@ function showDetail(id){
       <div class="irow"><div class="il">Fiscalizador</div><div class="iv">👤 ${a.fiscalizador}</div></div>
       ${a.obs?`<div class="irow"><div class="il">Observaciones</div><div class="iv" style="font-size:12px">${a.obs}</div></div>`:''}
     </div></div>
-    <div style="font-size:11px;color:var(--tx2);text-align:center;padding:8px">ID: ${a.id}</div>
-    <button class="btn btn-p" style="background:#6A1B9A;box-shadow:0 4px 14px rgba(106,27,154,.3);margin:4px 0 8px"
-      onclick="imprimirDesdeHistorial('${a.id}')">🖨️ Imprimir / Guardar PDF</button>`;
+    <div style="font-size:11px;color:var(--tx2);text-align:center;padding:8px">
+      ID: ${a.id}${a._editedTs?'<br><span style="color:#E65100">✏️ Editado: '+fmtFecha(a._editedTs)+' por '+(a._editedBy||'—')+'</span>':''}
+    </div>
+    <button class="btn btn-p" style="background:#6A1B9A;box-shadow:0 4px 14px rgba(106,27,154,.3);margin:4px 0 6px"
+      onclick="imprimirDesdeHistorial('${a.id}')">🖨️ Imprimir / Guardar PDF</button>
+    <button class="btn btn-p" style="background:#1565C0;box-shadow:0 4px 14px rgba(21,101,192,.3);margin:4px 0 6px"
+      onclick="cargarArqueoParaEditar('${a.id}')">✏️ Editar Arqueo</button>
+    <button class="btn btn-p" style="background:#2E7D32;box-shadow:0 4px 14px rgba(46,125,50,.3);margin:4px 0 6px"
+      onclick="compartirArqueo('${a.id}')">📤 Compartir / Copiar Datos</button>`;
   document.getElementById('modal-ov').classList.add('on');
 }
 function closeModal(e){
   if(!e||e.target===document.getElementById('modal-ov')||e.target.closest('.mc'))
     document.getElementById('modal-ov').classList.remove('on');
+}
+
+/* ═══ EDITAR ARQUEO ═══════════════════════════════════════════ */
+function cargarArqueoParaEditar(id){
+  const a=arqueos.find(x=>x.id===id);
+  if(!a){toast('Arqueo no encontrado');return;}
+  closeModal();
+  // Cargar todos los datos en curArq
+  curArq=JSON.parse(JSON.stringify(a)); // deep copy
+  curArq._editingId=id;
+  resetPasos();
+  showScr('s-arq');
+  // Mostrar banner de edición
+  document.getElementById('edit-banner').style.display='block';
+  // Pre-llenar campos de Paso 1
+  document.getElementById('p1-fecha').value=a.fecha||'';
+  document.getElementById('p1-hora').value=a.horaInicio||'';
+  document.getElementById('p1-sup').value=a.supervisor||'';
+  document.getElementById('p1-fondo').value=a.fondoFijo||'';
+  // Seleccionar corredor visualmente
+  const corKeys={'trolebús':'c-tr','ecovia':'c-so','surOcc':'c-sw'};
+  if(a.corredor&&corKeys[a.corredor]){
+    const el=document.querySelector('.cor-card.'+corKeys[a.corredor]);
+    if(el) selCor(a.corredor,el);
+  }
+  // Seleccionar turno visualmente
+  if(a.turno){
+    document.querySelectorAll('.tbtn').forEach(b=>{
+      if(b.textContent.trim().startsWith(a.turno)){selTurno(a.turno,b);}
+    });
+  }
+  goP(1);
+  toast('✏️ Cargando arqueo para editar...',2500);
+}
+
+/* ═══ COMPARTIR / COPIAR DATOS ═════════════════════════════════ */
+function compartirArqueo(id){
+  const a=arqueos.find(x=>x.id===id);
+  if(!a){toast('Arqueo no encontrado');return;}
+  const ci=COR_INFO[a.corredor]||{nom:a.corredor||'—'};
+  const NL='\n';
+  const SEP='═'.repeat(27);
+  let lines=[];
+  lines.push('ARQUEO DE BÓVEDA - EPMPTP');
+  lines.push(SEP);
+  lines.push('Corredor : '+(ci.nom));
+  lines.push('Fecha    : '+(a.fecha||'—'));
+  lines.push('Turno    : '+(a.turno||'—'));
+  lines.push('Inicio   : '+(a.horaInicio||'—')+'  Fin: '+(a.horaFin||'—'));
+  lines.push('Supervisor: '+(a.supervisor||'—'));
+  lines.push('Fiscaliz. : '+(a.fiscalizador||'—'));
+  lines.push('Fondo Fijo: '+f$(a.fondoFijo||0));
+  lines.push('Estado   : '+(a.status==='ok'?'✅ CORRECTO':a.status==='wa'?'⚠️ REVISAR':'🔴 ERROR'));
+  if(a._editedTs) lines.push('Editado  : '+fmtFecha(a._editedTs)+' por '+(a._editedBy||'—'));
+  lines.push('');
+  lines.push('── FONDO FIJO ──────────────');
+  let tEnt=0,tSal=0,tFis=0;
+  DENOMS.forEach(d=>{
+    const ent=((a.ctFondo||{})[d.id]?.ent)||0;
+    const sal=((a.ctFondo||{})[d.id]?.saldo)||0;
+    const fis=(a.ctDin||{})[d.id]||0;
+    tEnt+=ent;tSal+=sal;tFis+=fis;
+    if(ent||sal||fis) lines.push('  '+d.lbl+': Entr='+f$(ent)+' Abast='+f$(sal)+' Fís='+f$(fis));
+  });
+  lines.push('  TOTAL Entr='+f$(tEnt)+' Abast='+f$(tSal)+' Fís='+f$(tFis));
+  lines.push('');
+  lines.push('── ESPECIES VALORADAS ──────');
+  const tipos=ESP_TYPES[a.corredor]||[];
+  tipos.forEach(t=>{
+    const ent=((a.ctEsp||{})[t.id]?.ent)||0;
+    const bov=((a.ctEsp||{})[t.id]?.bov)||0;
+    const fis=(a.ctBol||{})[t.id]||0;
+    let sumHoy=0; Object.values(a.planHoy||{}).forEach(p=>{sumHoy+=p[t.id]||0;});
+    let sumAbast=0; Object.values(a.planHoy||{}).forEach(p=>{sumAbast+=(p['a_'+t.id]||0);});
+    lines.push('  '+t.lbl+': Kardex='+(ent+bov)+' Entr='+sumHoy+' Abast='+sumAbast+' Fís='+fis);
+  });
+  if(a.obs){lines.push('');lines.push('Observaciones: '+a.obs);}
+  lines.push('');
+  lines.push('ID: '+a.id);
+  lines.push('Generado: '+new Date().toLocaleString('es-EC'));
+  const txt=lines.join(NL);
+  if(navigator.share){
+    navigator.share({title:'Arqueo Bóveda EPMPTP — '+a.fecha,text:txt})
+      .catch(()=>_copiarTexto(txt));
+  } else {
+    _copiarTexto(txt);
+  }
+}
+
+function _copiarTexto(txt){
+  if(navigator.clipboard?.writeText){
+    navigator.clipboard.writeText(txt)
+      .then(()=>toast('📋 Datos copiados al portapapeles',2500))
+      .catch(()=>_copiarFallback(txt));
+  } else {
+    _copiarFallback(txt);
+  }
+}
+function _copiarFallback(txt){
+  const ta=document.createElement('textarea');
+  ta.value=txt;ta.style.cssText='position:fixed;opacity:0;top:0;left:0';
+  document.body.appendChild(ta);ta.focus();ta.select();
+  try{document.execCommand('copy');toast('📋 Datos copiados',2500);}
+  catch(e){toast('No se pudo copiar automáticamente',2500);}
+  document.body.removeChild(ta);
 }
 
 /* ═══ EXPORT ════════════════════════════════════════════════════ */
