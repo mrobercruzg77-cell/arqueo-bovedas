@@ -1814,12 +1814,13 @@ const PRINT_CSS=`
 body{font-family:Arial,Helvetica,sans-serif;font-size:8.5pt;color:#000;background:#fff;padding:8mm}
 @page{size:A4 portrait;margin:10mm 8mm}
 /* Encabezado */
-.rpt-top{display:flex;align-items:center;gap:10px;border:2px solid #000;padding:6px 10px;margin-bottom:4px}
-.rpt-logo{font-size:18pt;font-weight:900;color:#1a237e;border:2px solid #1a237e;padding:4px 8px;border-radius:4px;white-space:nowrap}
-.rpt-inst{flex:1;text-align:center}
-.rpt-inst-name{font-size:9pt;font-weight:700;text-transform:uppercase}
+.rpt-top{display:flex;align-items:center;gap:0;border:2px solid #000;margin-bottom:4px}
+.rpt-logo{padding:6px 10px;border-right:1px solid #000;display:flex;align-items:center;justify-content:center;min-width:170px}
+.rpt-logo img{max-height:70px;max-width:155px;object-fit:contain}
+.rpt-inst{flex:1;text-align:center;padding:6px 10px}
+.rpt-inst-name{font-size:9pt;font-weight:700;text-transform:uppercase;line-height:1.3}
 .rpt-inst-sub{font-size:8pt;margin-top:2px}
-.rpt-inst-title{font-size:11pt;font-weight:900;text-transform:uppercase;border-top:1px solid #000;margin-top:4px;padding-top:3px;letter-spacing:.5px}
+.rpt-inst-title{font-size:12pt;font-weight:900;text-transform:uppercase;text-decoration:underline;margin-top:5px;padding-top:3px;letter-spacing:.5px}
 /* Meta tabla */
 .rpt-meta{width:100%;border-collapse:collapse;margin-bottom:5px}
 .rpt-meta td{border:1px solid #000;padding:3px 6px;font-size:8pt}
@@ -1949,27 +1950,29 @@ function buildPrintHTML(arq, userFisc){
 <style>@media print{#mb-bar{display:none!important}}</style>
 
 <div class="rpt-top">
-  <div class="rpt-logo">EPMPTP</div>
+  <div class="rpt-logo">
+    <img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyMjAgODAiIHdpZHRoPSIyMjAiIGhlaWdodD0iODAiPjxnIHRyYW5zZm9ybT0idHJhbnNsYXRlKDIsMikiPjxwYXRoIGQ9Ik00LDAgTDYwLDAgTDY0LDggTDY0LDUyIFE2NCw2OCAzMiw3NiBRMCw2OCAwLDUyIEwwLDggWiIgZmlsbD0iIzFhM2E3YyIgc3Ryb2tlPSIjYjg4NjBiIiBzdHJva2Utd2lkdGg9IjEuNSIvPjxwYXRoIGQ9Ik00LDggTDMwLDggTDMwLDM4IFExNiwzOCA0LDMwIFoiIGZpbGw9IiM0YTkwZDkiLz48cGF0aCBkPSJNMzQsOCBMNjAsOCBMNjAsMzAgUTQ4LDM4IDM0LDM4IFoiIGZpbGw9IiNjMDM5MmIiLz48cGF0aCBkPSJNNCw0MiBRNCw1NSAyMCw2MiBMMzAsNjIgTDMwLDQyIFoiIGZpbGw9IiMyN2FlNjAiLz48cGF0aCBkPSJNMzQsNDIgTDM0LDYyIEw0NCw2MiBRNjAsNTUgNjAsNDIgWiIgZmlsbD0iI2YzOWMxMiIvPjxyZWN0IHg9IjI4IiB5PSI4IiB3aWR0aD0iOCIgaGVpZ2h0PSI2OCIgZmlsbD0id2hpdGUiIG9wYWNpdHk9IjAuNSIgcng9IjEiLz48cmVjdCB4PSI0IiB5PSIzNSIgd2lkdGg9IjYwIiBoZWlnaHQ9IjgiIGZpbGw9IndoaXRlIiBvcGFjaXR5PSIwLjUiIHJ4PSIxIi8+PHBvbHlnb24gcG9pbnRzPSIzMiwxNCAyMiwzMCA0MiwzMCIgZmlsbD0id2hpdGUiIG9wYWNpdHk9IjAuOSIvPjxwb2x5Z29uIHBvaW50cz0iMzIsMTUgMjksMjIgMzUsMjIiIGZpbGw9IiNlOGU4ZTgiLz48cGF0aCBkPSJNMjAsNSBRMjYsMCAzMiwzIFEzOCwwIDQ0LDUgUTM4LDkgMzIsNyBRMjYsOSAyMCw1WiIgZmlsbD0iI2I4ODYwYiIvPjxjaXJjbGUgY3g9IjQ4IiBjeT0iMTgiIHI9IjMuNSIgZmlsbD0iI2YxYzQwZiIvPjxwYXRoIGQ9Ik0xMCw1NCBRMjAsNDkgMzAsNTQgTDI4LDU4IEwxMiw1OCBaIiBmaWxsPSIjMjk4MGI5Ii8+PGxpbmUgeDE9IjE2IiB5MT0iNDQiIHgyPSIxNiIgeTI9IjU0IiBzdHJva2U9IiMxYTVlMjAiIHN0cm9rZS13aWR0aD0iMS41Ii8+PHBhdGggZD0iTTEwLDQzIFExNiwzOSAyMiw0MyBRMTYsNDcgMTAsNDNaIiBmaWxsPSIjMmVjYzcxIi8+PGxpbmUgeDE9IjQ4IiB5MT0iNDQiIHgyPSI0OCIgeTI9IjU0IiBzdHJva2U9IiMxYTVlMjAiIHN0cm9rZS13aWR0aD0iMS41Ii8+PHBhdGggZD0iTTQyLDQzIFE0OCwzOSA1NCw0MyBRNDgsNDcgNDIsNDNaIiBmaWxsPSIjMmVjYzcxIi8+PHBhdGggZD0iTTQsMCBMNjAsMCBMNjQsOCBMNjQsNTIgUTY0LDY4IDMyLDc2IFEwLDY4IDAsNTIgTDAsOCBaIiBmaWxsPSJub25lIiBzdHJva2U9IiNiODg2MGIiIHN0cm9rZS13aWR0aD0iMiIvPjwvZz48dGV4dCB4PSI3NiIgeT0iNDAiIGZvbnQtZmFtaWx5PSJBcmlhbCBCbGFjayxBcmlhbCIgZm9udC13ZWlnaHQ9IjkwMCIgZm9udC1zaXplPSIzMCIgZmlsbD0iIzFhM2E3YyI+UXVpdG88L3RleHQ+PHRleHQgeD0iNzYiIHk9IjU4IiBmb250LWZhbWlseT0iQXJpYWwsc2Fucy1zZXJpZiIgZm9udC1zaXplPSIxMS41IiBmaWxsPSIjMWEzYTdjIiBmb250LXdlaWdodD0iNjAwIj5BbGNhbGQmIzIzNzthIE1ldHJvcG9saXRhbmE8L3RleHQ+PC9zdmc+" alt="Quito Alcaldía Metropolitana">
+  </div>
   <div class="rpt-inst">
-    <div class="rpt-inst-name">EMPRESA PUBLICA METROPOLITANA DE TRANSPORTE DE PASAJEROS DE QUITO</div>
-    <div class="rpt-inst-sub">COORDINACION DE FISCALIZACION OPERATIVA</div>
-    <div class="rpt-inst-title">ARQUEO DE VALORES EN BOVEDA</div>
+    <div class="rpt-inst-name">EMPRESA P&Uacute;BLICA METROPOLITANA DE TRANSPORTE DE PASAJEROS DE QUITO</div>
+    <div class="rpt-inst-sub">COORDINACI&Oacute;N DE FISCALIZACI&Oacute;N OPERATIVA</div>
+    <div class="rpt-inst-title">ARQUEO DE VALORES EN B&Oacute;VEDA</div>
   </div>
 </div>
 
 <table class="rpt-meta">
   <tr>
     <td class="rml">CORREDOR:</td><td class="rmv" colspan="3">${ci.nom}</td>
-    <td class="rml">SUPERVISORES DE CAJA:</td><td class="rmv" colspan="2">${supervisor}</td>
+    <td class="rml">HORA INICIO:</td><td class="rmv">${horaInicio}</td>
+    <td class="rml">SUPERVISORES DE CAJA:</td><td class="rmv">${supervisor}</td>
   </tr>
   <tr>
     <td class="rml">FECHA:</td><td class="rmv">${fecha}</td>
-    <td class="rml">HORA INICIO:</td><td class="rmv">${horaInicio}</td>
-    <td class="rml">HORA FINAL:</td><td class="rmv">${horaFin}</td>
-    <td class="rml">TURNO:</td><td class="rmv">${turno}</td>
+    <td class="rml">HORA FINAL:</td><td class="rmv" colspan="2">${horaFin}</td>
+    <td class="rml">TURNO:</td><td class="rmv" colspan="2">${turno}</td>
   </tr>
   <tr>
-    <td class="rml">FONDO FIJO CERTIFICADO:</td><td class="rmv">${fondoFijo}</td>
+    <td class="rml">FONDO FIJO:</td><td class="rmv">${fondoFijo}</td>
     <td class="rml">FISCALIZADOR(ES):</td><td class="rmv" colspan="4">${fiscalizador}</td>
   </tr>
 </table>
