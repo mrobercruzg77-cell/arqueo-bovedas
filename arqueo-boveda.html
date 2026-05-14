@@ -1881,15 +1881,18 @@ function buildPrintHTML(arq, userFisc){
     const ent=((arq.ctFondo||{})[d.id]?.ent)||0;
     const sal=((arq.ctFondo||{})[d.id]?.saldo)||0;
     const fis=(arq.ctDin||{})[d.id]||0;
-    const tot=ent+sal+fis; tEnt+=ent; tSal+=sal; tFis+=fis;
+    // TOTAL = entregado + saldo (kardex del fondo). Físico es columna de verificación.
+    const tot=ent+sal; tEnt+=ent; tSal+=sal; tFis+=fis;
     fondoRows+=`<tr>
       <td style="text-align:left">${d.lbl}</td>
       <td>${f$(ent)}</td><td>${f$(sal)}</td><td>${f$(fis)}</td><td>${f$(tot)}</td>
     </tr>`;
   });
-  const tTot=tEnt+tSal+tFis;
+  const tKardex=tEnt+tSal; // total kardex fondo
   const fondoFijoNum=parseFloat(arq.fondoFijo)||0;
-  const tDiffF=fondoFijoNum-tFis;
+  // Verificación: entregado + físico contado debe = fondo asignado
+  const tVerif=tEnt+tFis;
+  const tDiffF=fondoFijoNum-tVerif;
   const dCls=Math.abs(tDiffF)<0.02?'ok':'er';
   const dTxt=Math.abs(tDiffF)<0.02?'CUADRA':f$(tDiffF);
 
@@ -1907,16 +1910,23 @@ function buildPrintHTML(arq, userFisc){
     // abastecimiento desde planillas hoy
     let sumAbast=0;
     Object.values(planH).forEach(p=>{ sumAbast+=(p['a_'+t.id]||0); });
-    const fis=(arq.ctBol||{})[t.id]||0;
-    const tot=sumHoy+fis+sumAbast;
+    // preparado para mañana (también está físicamente en bóveda)
+    let sumMan=0;
+    const planM=arq.planMañana||{};
+    Object.values(planM).forEach(p=>{ sumMan+=p[t.id]||0; });
+    // físico en bodega = stock libre contado + preparado mañana
+    const fisLib=(arq.ctBol||{})[t.id]||0;
+    const fisTotal=fisLib+sumMan;
+    // TOTAL = entregado + físicoTotal + abastecimiento = debe igualar KARDEX
+    const tot=sumHoy+fisTotal+sumAbast;
     const diff=kar-tot;
-    ttKar+=kar; ttEnt+=sumHoy; ttFis+=fis; ttAbast+=sumAbast; ttTot+=tot;
+    ttKar+=kar; ttEnt+=sumHoy; ttFis+=fisTotal; ttAbast+=sumAbast; ttTot+=tot;
     const rc=Math.abs(diff)<1?'':(Math.abs(diff)<5?'wa-row':'diff-row');
     const dc=Math.abs(diff)<1?'ok':(Math.abs(diff)<5?'wa':'er');
     const dt=Math.abs(diff)<1?'OK':(diff>0?'+'+diff:String(diff));
     espRows+=`<tr class="${rc}">
       <td style="text-align:left">${t.lbl}</td>
-      <td>${kar}</td><td>${sumHoy}</td><td>${fis}</td>
+      <td>${kar}</td><td>${sumHoy}</td><td>${fisTotal}</td>
       <td>${sumAbast}</td><td>${tot}</td>
       <td class="${dc}">${dt}</td>
     </tr>`;
@@ -1980,13 +1990,13 @@ function buildPrintHTML(arq, userFisc){
   <tbody>${fondoRows}</tbody>
   <tfoot>
     <tr><td style="text-align:left;font-weight:700">TOTALES</td>
-      <td>${f$(tEnt)}</td><td>${f$(tSal)}</td><td>${f$(tFis)}</td><td>${f$(tTot)}</td>
+      <td>${f$(tEnt)}</td><td>${f$(tSal)}</td><td>${f$(tFis)}</td><td>${f$(tKardex)}</td>
     </tr>
     <tr><td style="text-align:left">VALOR FONDO FIJO ASIGNADO SEG. ACTA</td>
       <td colspan="3"></td><td>${fondoFijo}</td>
     </tr>
-    <tr><td style="text-align:left">VALOR SEGUN VERIFICACION FISICA</td>
-      <td colspan="3"></td><td>${f$(tFis)}</td>
+    <tr><td style="text-align:left">VALOR SEGUN VERIFICACION FISICA<br><small style="font-weight:400">(Entregado + Físico contado)</small></td>
+      <td colspan="3"></td><td>${f$(tVerif)}</td>
     </tr>
     <tr><td style="text-align:left;font-weight:700">DIFERENCIA</td>
       <td colspan="3"></td><td class="${dCls}">${dTxt}</td>
