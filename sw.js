@@ -1,6 +1,6 @@
 /* Service Worker — Arqueo Bóveda EPMPTP */
 /* Versión: network-first para garantizar siempre la versión más reciente */
-const CACHE_NAME = 'arqueo-boveda-v8';
+const CACHE_NAME = 'arqueo-boveda-v9';
 const ARCHIVOS = [
   './arqueo-boveda.html',
   './manifest.json',
